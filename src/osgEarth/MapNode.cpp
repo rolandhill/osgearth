@@ -37,7 +37,7 @@ using namespace osgEarth;
 
 //---------------------------------------------------------------------------
 
-namespace 
+namespace
 {
     // adapter that lets MapNode listen to Map events
     struct MapNodeMapCallbackProxy : public MapCallback
@@ -109,13 +109,13 @@ public:
       }
 
       virtual void apply(osg::PagedLOD& node)
-      {        
-          //The PagedLOD node will contain two filenames, the first is empty and is the actual geometry of the          
+      {
+          //The PagedLOD node will contain two filenames, the first is empty and is the actual geometry of the
           //tile and the second is the filename of the next tile.
           if (node.getNumFileNames() > 1)
           {
               //Get the child filename
-              const std::string &filename = node.getFileName(1);              
+              const std::string &filename = node.getFileName(1);
               if (osgEarth::Registry::instance()->isBlacklisted(filename))
               {
                   //If the tile is blacklisted, we set the actual geometry, child 0, to always display
@@ -133,9 +133,9 @@ public:
                   {
                       node.setRange(0, ranges->_minRange, ranges->_maxRange);
                       node.setRange(1, 0, ranges->_minRange);
-                  }                  
+                  }
               }
-              
+
           }
           traverse(node);
       }
@@ -158,7 +158,7 @@ MapNode::load(osg::ArgumentParser& args)
                 return r.release<MapNode>();
             }
         }
-    }    
+    }
     return 0L;
 }
 
@@ -208,7 +208,7 @@ MapNode::init()
     // deleting during startup. It is possible that during startup, a driver
     // will load that will take a reference to the MapNode (like in a
     // ModelSource node operation) and we don't want that deleting the MapNode
-    // out from under us. 
+    // out from under us.
     // This is paired by an unref_nodelete() at the end of this method.
     this->ref();
 
@@ -243,14 +243,14 @@ MapNode::init()
     // will make their way to any read* calls down the pipe
     const osgDB::Options* global_options = _map->getGlobalOptions();
 
-    osg::ref_ptr<osgDB::Options> local_options = global_options ? 
+    osg::ref_ptr<osgDB::Options> local_options = global_options ?
         Registry::instance()->cloneOrCreateOptions( global_options ) :
         NULL;
 
     if ( local_options.valid() )
     {
         OE_INFO << LC
-            << "Options string = " 
+            << "Options string = "
             << (local_options.valid()? local_options->getOptionString() : "<empty>")
             << std::endl;
     }
@@ -260,6 +260,12 @@ MapNode::init()
 
     // load and attach the terrain engine, but don't initialize it until we need it
     const TerrainOptions& terrainOptions = _mapNodeOptions.getTerrainOptions();
+
+    //Set a flag in the map to indicate if we need to reject NoData values
+    _map->setRejectNoData(terrainOptions.rejectNoData().get());
+
+    //Set the noDataHeight in the map
+    _map->setNoDataHeight(terrainOptions.noDataHeight().get());
 
     _terrainEngine = TerrainEngineNodeFactory::create( _map.get(), terrainOptions );
     _terrainEngineInitialized = false;
@@ -274,8 +280,8 @@ MapNode::init()
     // initialize terrain-level lighting:
     if ( terrainOptions.enableLighting().isSet() )
     {
-        _terrainEngineContainer->getOrCreateStateSet()->setMode( 
-            GL_LIGHTING, 
+        _terrainEngineContainer->getOrCreateStateSet()->setMode(
+            GL_LIGHTING,
             terrainOptions.enableLighting().value() ? 1 : 0 );
     }
 
@@ -283,7 +289,7 @@ MapNode::init()
     {
         // inform the terrain engine of the map information now so that it can properly
         // initialize it's CoordinateSystemNode. This is necessary in order to support
-        // manipulators and to set up the texture compositor prior to frame-loop 
+        // manipulators and to set up the texture compositor prior to frame-loop
         // initialization.
         _terrainEngine->preInitialize( _map.get(), terrainOptions );
         _terrainEngineContainer->addChild( _terrainEngine );
@@ -335,8 +341,8 @@ MapNode::init()
 
     if ( _mapNodeOptions.enableLighting().isSet() )
     {
-        ss->setMode( 
-            GL_LIGHTING, 
+        ss->setMode(
+            GL_LIGHTING,
             _mapNodeOptions.enableLighting().value() ? 1 : 0 );
     }
 
@@ -364,10 +370,10 @@ MapNode::~MapNode()
 
     ModelLayerVector modelLayers;
     _map->getModelLayers( modelLayers );
-    //Remove our model callback from any of the model layers in the map    
+    //Remove our model callback from any of the model layers in the map
     for (osgEarth::ModelLayerVector::iterator itr = modelLayers.begin(); itr != modelLayers.end(); ++itr)
     {
-        this->onModelLayerRemoved( itr->get() );        
+        this->onModelLayerRemoved( itr->get() );
     }
 }
 
@@ -472,13 +478,13 @@ MapNode::onModelLayerAdded( ModelLayer* layer, unsigned int index )
 {
     if ( !layer->getEnabled() )
         return;
-    
+
     // install a noe operation that will associate this mapnode with
     // any MapNodeObservers loaded by the model layer:
     ModelSource* modelSource = layer->getModelSource();
     if ( modelSource )
     {
-        // install a post-processing callback on the ModelLayer's source 
+        // install a post-processing callback on the ModelLayer's source
         // so we can update the MapNode on new data that comes in:
         modelSource->addPostProcessor( new MapNodeObserverInstaller(this) );
     }
@@ -493,7 +499,7 @@ MapNode::onModelLayerAdded( ModelLayer* layer, unsigned int index )
         if ( _modelLayerNodes.find( layer ) != _modelLayerNodes.end() )
         {
             OE_WARN
-                << "Illegal: tried to add the name model layer more than once: " 
+                << "Illegal: tried to add the name model layer more than once: "
                 << layer->getName()
                 << std::endl;
         }
@@ -557,10 +563,10 @@ MapNode::onModelLayerRemoved( ModelLayer* layer )
                 _models->removeChild( node );
                 updateOverlayGraph();
             }
-            
+
             _modelLayerNodes.erase( i );
         }
-        
+
         dirtyBound();
     }
 }
@@ -575,7 +581,7 @@ MapNode::onModelLayerMoved( ModelLayer* layer, unsigned int oldIndex, unsigned i
         if ( i != _modelLayerNodes.end() )
         {
             osg::ref_ptr<osg::Node> node = i->second;
-            
+
             //if ( dynamic_cast<osgSim::OverlayNode*>( node ) )
             //{
             //    // treat overlay node as a special case
@@ -586,7 +592,7 @@ MapNode::onModelLayerMoved( ModelLayer* layer, unsigned int oldIndex, unsigned i
                 _models->insertChild( newIndex, node.get() );
             }
         }
-        
+
         dirtyBound();
     }
 }
@@ -607,7 +613,7 @@ namespace
 
 void
 MapNode::addTerrainDecorator(osg::Group* decorator)
-{    
+{
     if ( _terrainEngine )
     {
         decorator->addChild( _terrainEngine );

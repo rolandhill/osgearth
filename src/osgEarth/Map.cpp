@@ -34,7 +34,7 @@ MapCallback::onMapModelChanged( const MapModelChange& change )
 {
     switch( change.getAction() )
     {
-    case MapModelChange::ADD_ELEVATION_LAYER: 
+    case MapModelChange::ADD_ELEVATION_LAYER:
         onElevationLayerAdded( change.getElevationLayer(), change.getFirstIndex() ); break;
     case MapModelChange::ADD_IMAGE_LAYER:
         onImageLayerAdded( change.getImageLayer(), change.getFirstIndex() ); break;
@@ -85,7 +85,7 @@ _dataModelRevision   ( 0 )
         if ( !regCachePolicy.isSet() )
         {
             Registry::instance()->setDefaultCachePolicy( *_mapOptions.cachePolicy() );
-            OE_INFO << LC 
+            OE_INFO << LC
                 << "Setting default cache policy from map ("
                 << _mapOptions.cachePolicy()->usageString() << ")" << std::endl;
         }
@@ -124,7 +124,7 @@ Map::~Map()
 bool
 Map::isGeocentric() const
 {
-    return 
+    return
         _mapOptions.coordSysType() == MapOptions::CSTYPE_GEOCENTRIC ||
         _mapOptions.coordSysType() == MapOptions::CSTYPE_GEOCENTRIC_CUBE;
 }
@@ -327,7 +327,7 @@ Map::getCache() const
     if ( !_cache.valid() )
     {
         Cache* cache = 0L;
-        
+
         // if a cache is defined in the options, use that.
         if ( _mapOptions.cache().isSet() )
         {
@@ -375,21 +375,21 @@ Map::setCache( Cache* cache )
     }
 }
 
-void 
+void
 Map::addMapCallback( MapCallback* cb ) const
 {
     if ( cb )
         const_cast<Map*>(this)->_mapCallbacks.push_back( cb );
 }
 
-void 
+void
 Map::removeMapCallback( MapCallback* cb )
 {
     MapCallbackList::iterator i = std::find( _mapCallbacks.begin(), _mapCallbacks.end(), cb);
     if (i != _mapCallbacks.end())
     {
         _mapCallbacks.erase( i );
-    }    
+    }
 }
 
 void
@@ -422,13 +422,13 @@ Map::addImageLayer( ImageLayer* layer )
             newRevision = ++_dataModelRevision;
         }
 
-        // a separate block b/c we don't need the mutex   
+        // a separate block b/c we don't need the mutex
         for( MapCallbackList::iterator i = _mapCallbacks.begin(); i != _mapCallbacks.end(); i++ )
         {
             i->get()->onMapModelChanged( MapModelChange(
                 MapModelChange::ADD_IMAGE_LAYER, newRevision, layer, index) );
-        }   
-    }   
+        }
+    }
 }
 
 
@@ -462,13 +462,13 @@ Map::insertImageLayer( ImageLayer* layer, unsigned int index )
             newRevision = ++_dataModelRevision;
         }
 
-        // a separate block b/c we don't need the mutex   
+        // a separate block b/c we don't need the mutex
         for( MapCallbackList::iterator i = _mapCallbacks.begin(); i != _mapCallbacks.end(); i++ )
         {
             i->get()->onMapModelChanged( MapModelChange(
                 MapModelChange::ADD_IMAGE_LAYER, newRevision, layer, index) );
-        }   
-    }   
+        }
+    }
 }
 
 void
@@ -483,7 +483,7 @@ Map::addElevationLayer( ElevationLayer* layer )
 
         //Set the Cache for the MapLayer to our cache.
         layer->setCache( this->getCache() );
-        
+
         // Tell the layer the map profile, if possible:
         if ( _profile.valid() )
             layer->setTargetProfileHint( _profile.get() );
@@ -499,16 +499,16 @@ Map::addElevationLayer( ElevationLayer* layer )
             newRevision = ++_dataModelRevision;
         }
 
-        // a separate block b/c we don't need the mutex   
+        // a separate block b/c we don't need the mutex
         for( MapCallbackList::iterator i = _mapCallbacks.begin(); i != _mapCallbacks.end(); i++ )
         {
             i->get()->onMapModelChanged( MapModelChange(
                 MapModelChange::ADD_ELEVATION_LAYER, newRevision, layer, index) );
-        }   
-    }   
+        }
+    }
 }
 
-void 
+void
 Map::removeImageLayer( ImageLayer* layer )
 {
     osgEarth::Registry::instance()->clearBlacklist();
@@ -544,7 +544,7 @@ Map::removeImageLayer( ImageLayer* layer )
     }
 }
 
-void 
+void
 Map::removeElevationLayer( ElevationLayer* layer )
 {
     osgEarth::Registry::instance()->clearBlacklist();
@@ -815,7 +815,7 @@ Map::addTerrainMaskLayer( MaskLayer* layer )
 
         layer->initialize( _dbOptions.get(), this );
 
-        // a separate block b/c we don't need the mutex   
+        // a separate block b/c we don't need the mutex
         for( MapCallbackList::iterator i = _mapCallbacks.begin(); i != _mapCallbacks.end(); i++ )
         {
             i->get()->onMapModelChanged( MapModelChange(
@@ -844,13 +844,13 @@ Map::removeTerrainMaskLayer( MaskLayer* layer )
                 }
             }
         }
-        
-        // a separate block b/c we don't need the mutex   
+
+        // a separate block b/c we don't need the mutex
         for( MapCallbackList::iterator i = _mapCallbacks.begin(); i != _mapCallbacks.end(); i++ )
         {
             i->get()->onMapModelChanged( MapModelChange(
                 MapModelChange::REMOVE_MASK_LAYER, newRevision, layerRef.get()) );
-        }   
+        }
     }
 }
 
@@ -877,8 +877,8 @@ Map::clear()
         // calculate a new revision.
         newRevision = ++_dataModelRevision;
     }
-    
-    // a separate block b/c we don't need the mutex   
+
+    // a separate block b/c we don't need the mutex
     for( MapCallbackList::iterator i = _mapCallbacks.begin(); i != _mapCallbacks.end(); i++ )
     {
         for( ImageLayerVector::iterator k = imageLayersRemoved.begin(); k != imageLayersRemoved.end(); ++k )
@@ -939,7 +939,7 @@ Map::calculateProfile()
                 }
                 else
                 {
-                    OE_WARN << LC 
+                    OE_WARN << LC
                         << "Map is geocentric, but the configured profile does not "
                         << "have a geographic SRS. Falling back on default.."
                         << std::endl;
@@ -993,7 +993,7 @@ Map::calculateProfile()
 
         // convert the profile to Plate Carre if necessary.
         if (_profile.valid() &&
-            _profile->getSRS()->isGeographic() && 
+            _profile->getSRS()->isGeographic() &&
             getMapOptions().coordSysType() == MapOptions::CSTYPE_PROJECTED )
         {
             OE_INFO << LC << "Projected display with geographic SRS; activating Plate Carre mode" << std::endl;
@@ -1054,7 +1054,7 @@ namespace
 {
     /**
      * Returns a heightfield corresponding to the input key by compositing
-     * elevation data for a vector of elevation layers. The resulting 
+     * elevation data for a vector of elevation layers. The resulting
      * heightfield's height values will be expressed relative to the vertical
      * datum in the requesting key (which is usually that of the Map itself).
      */
@@ -1067,14 +1067,16 @@ namespace
                      ElevationSamplePolicy           samplePolicy,
                      osg::ref_ptr<osg::HeightField>& out_result,
                      bool*                           out_isFallback,
-                     ProgressCallback*               progress ) 
-    {        
+                     ProgressCallback*               progress,
+                     bool rejectNoData,
+                     float noDataHeight )
+    {
         unsigned lowestLOD = key.getLevelOfDetail();
         bool hfInitialized = false;
 
         //Get a HeightField for each of the enabled layers
         GeoHeightFieldVector heightFields;
-        
+
         //The number of fallback heightfields we have
         int numFallbacks = 0;
 
@@ -1123,7 +1125,7 @@ namespace
                             lowestLOD = hf_key.getLevelOfDetail();
 
                         //This HeightField is fallback data, so increment the count.
-                        numFallbacks++;                        
+                        numFallbacks++;
                     }
                 }
 
@@ -1139,14 +1141,14 @@ namespace
         {
             *out_isFallback = (numFallbacks == heightFields.size());
             //OE_NOTICE << "Num fallbacks=" << numFallbacks << " numHeightFields=" << heightFields.size() << " is fallback " << *out_isFallback << std::endl;
-        }   
-        
+        }
+
         if ( heightFields.size() == 0 )
-        {            
+        {
             //If we got no heightfields but were requested to fallback, create an empty heightfield.
             if ( fallback )
             {
-                out_result = HeightFieldUtils::createReferenceHeightField( keyToUse.getExtent(), defElevSize, defElevSize );                
+                out_result = HeightFieldUtils::createReferenceHeightField( keyToUse.getExtent(), defElevSize, defElevSize, noDataHeight );
                 return true;
             }
             else
@@ -1179,9 +1181,9 @@ namespace
 
             for (GeoHeightFieldVector::const_iterator i = heightFields.begin(); i < heightFields.end(); ++i)
             {
-                if (i->getHeightField()->getNumColumns() > width) 
+                if (i->getHeightField()->getNumColumns() > width)
                     width = i->getHeightField()->getNumColumns();
-                if (i->getHeightField()->getNumRows() > height) 
+                if (i->getHeightField()->getNumRows() > height)
                     height = i->getHeightField()->getNumRows();
             }
             out_result = new osg::HeightField();
@@ -1194,7 +1196,7 @@ namespace
             double dy = (maxy - miny)/(double)(out_result->getNumRows()-1);
 
             const SpatialReference* keySRS = keyToUse.getProfile()->getSRS();
-            
+
             //Create the new heightfield by sampling all of them.
             for (unsigned int c = 0; c < width; ++c)
             {
@@ -1262,7 +1264,7 @@ namespace
 
         // Replace any NoData areas with the reference value. This is zero for HAE datums,
         // and some geoid height for orthometric datums.
-        if (out_result.valid())
+        if (out_result.valid() && !rejectNoData)
         {
             const Geoid*         geoid = 0L;
             const VerticalDatum* vdatum = key.getProfile()->getSRS()->getVerticalDatum();
@@ -1276,7 +1278,8 @@ namespace
                 out_result.get(),
                 key.getExtent(),
                 NO_DATA_VALUE,
-                geoid );
+                geoid,
+                noDataHeight );
 
             //ReplaceInvalidDataOperator o;
             //o.setValidDataOperator(new osgTerrain::NoDataValue(NO_DATA_VALUE));
@@ -1285,7 +1288,7 @@ namespace
 
         //Initialize the HF values for osgTerrain
         if (out_result.valid() && !hfInitialized )
-        {   
+        {
             //Go ahead and set up the heightfield so we don't have to worry about it later
             double minx, miny, maxx, maxy;
             key.getExtent().getBounds(minx, miny, maxx, maxy);
@@ -1313,18 +1316,20 @@ Map::getHeightField(const TileKey&                  key,
 {
     Threading::ScopedReadLock lock( const_cast<Map*>(this)->_mapDataMutex );
 
-    ElevationInterpolation interp = getMapOptions().elevationInterpolation().get();    
+    ElevationInterpolation interp = getMapOptions().elevationInterpolation().get();
 
     return s_getHeightField(
-        key, 
-        _elevationLayers, 
-        fallback, 
+        key,
+        _elevationLayers,
+        fallback,
         convertToHAE ? _profileNoVDatum.get() : 0L,
-        interp, 
-        samplePolicy, 
-        out_result,  
+        interp,
+        samplePolicy,
+        out_result,
         out_isFallback,
-        progress );
+        progress,
+        _rejectNoData,
+        _noDataHeight );
 }
 
 bool
@@ -1372,9 +1377,9 @@ Map::sync( MapFrame& frame ) const
         // sync the revision numbers.
         frame._initialized = true;
         frame._mapDataModelRevision = _dataModelRevision;
-            
+
         result = true;
-    }    
+    }
     return result;
 }
 
@@ -1385,7 +1390,7 @@ _profile               ( 0L ),
 _isGeocentric          ( true ),
 _isCube                ( false ),
 _elevationInterpolation( INTERP_BILINEAR )
-{ 
+{
     if ( map )
     {
         _profile = map->getProfile();
@@ -1402,7 +1407,7 @@ _isCube                ( rhs._isCube ),
 _elevationInterpolation( rhs._elevationInterpolation )
 {
     //nop
-}              
+}
 
 //------------------------------------------------------------------------
 
@@ -1452,23 +1457,25 @@ bool
 MapFrame::getHeightField(const TileKey&                  key,
                          bool                            fallback,
                          osg::ref_ptr<osg::HeightField>& out_hf,
-                         bool*                           out_isFallback,    
+                         bool*                           out_isFallback,
                          bool                            convertToHAE,
                          ElevationSamplePolicy           samplePolicy,
                          ProgressCallback*               progress) const
 {
     if ( !_map.valid() ) return false;
 
-    return s_getHeightField( 
-        key, 
+    return s_getHeightField(
+        key,
         _elevationLayers,
-        fallback, 
+        fallback,
         convertToHAE ? _map->getProfileNoVDatum() : 0L,
-        _mapInfo.getElevationInterpolation(), 
-        samplePolicy, 
-        out_hf, 
+        _mapInfo.getElevationInterpolation(),
+        samplePolicy,
+        out_hf,
         out_isFallback,
-        progress );
+        progress,
+        _map->getRejectNoData(),
+        _map->getNoDataHeight() );
 }
 
 int
@@ -1516,7 +1523,7 @@ MapFrame::isCached( const TileKey& key ) const
     //Check to see if the tile will load fast
     // Check the imagery layers
     for( ImageLayerVector::const_iterator i = imageLayers().begin(); i != imageLayers().end(); i++ )
-    {   
+    {
         //If we're cache only we should be fast
         if (i->get()->isCacheOnly()) continue;
 
@@ -1548,5 +1555,5 @@ MapFrame::isCached( const TileKey& key ) const
         }
     }
 
-    return true;        
+    return true;
 }

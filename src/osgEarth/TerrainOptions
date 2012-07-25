@@ -34,7 +34,7 @@ namespace osgEarth
     public:
         /** Tile loading modes. */
         enum Mode {
-            /** Load tiles one LOD at a tile, serially */ 
+            /** Load tiles one LOD at a tile, serially */
             MODE_SERIAL,
 
             /** Load tiles one LOD at a tile, in parallel */
@@ -113,7 +113,7 @@ namespace osgEarth
     };
 
     extern OSGEARTH_EXPORT int computeLoadingThreads(const LoadingPolicy& policy);
-    
+
     /**
      * Base class for the configuration for a terrain engine driver.
      */
@@ -124,7 +124,7 @@ namespace osgEarth
 
         /** dtor */
         virtual ~TerrainOptions() { }
-       
+
         /**
          * Sets or gets the scale factor for height-field values.
          * Default = 1.0
@@ -230,8 +230,8 @@ namespace osgEarth
          * Whether to explicity enable or disable GL lighting on the map node.
          */
         optional<bool>& enableLighting() { return _enableLighting; }
-        const optional<bool>& enableLighting() const { return _enableLighting; }  
-    
+        const optional<bool>& enableLighting() const { return _enableLighting; }
+
         /**
          * Whether to enable mipmaping and mipmap generation on textures
          */
@@ -249,7 +249,7 @@ namespace osgEarth
          */
         optional<osg::Texture::FilterMode> magFilter() { return _magFilter;}
         const optional<osg::Texture::FilterMode> magFilter() const { return _magFilter;}
-            
+
         /**
          * Whether to enable blending
          */
@@ -274,12 +274,24 @@ namespace osgEarth
 
         /**
          * Traversal mask to use for secondary geometry -- geometry that exists for
-         * secondary purpose (e.g. terrain skirts) that should not participate in 
+         * secondary purpose (e.g. terrain skirts) that should not participate in
          * intersection, shadowing, etc.
          */
         optional<unsigned>& secondaryTraversalMask() { return _secondaryTraversalMask; }
         const optional<unsigned>& secondaryTraversalMask() const { return _secondaryTraversalMask; }
-   
+
+        /**
+         * Whether to reject NoData values or replace them with 0 (default).
+         */
+        optional<bool>& rejectNoData() { return _rejectNoData; }
+        const optional<bool>& rejectNoData() const { return _rejectNoData; }
+
+        /**
+         * Height for regions with no elevation data
+         */
+        optional<float>& noDataHeight() { return _noDataHeight; }
+        const optional<float>& noDataHeight() const { return _noDataHeight; }
+
     public:
         virtual Config getConfig() const;
 
@@ -291,7 +303,7 @@ namespace osgEarth
 
     private:
         void fromConfig( const Config& conf );
-                    
+
         optional<float> _verticalScale;
         optional<float> _heightFieldSampleRatio;
         optional<float> _minTileRangeFactor;
@@ -314,6 +326,8 @@ namespace osgEarth
         optional<ElevationInterpolation> _elevationInterpolation;
         optional<unsigned> _primaryTraversalMask;
         optional<unsigned> _secondaryTraversalMask;
+        optional<bool>  _rejectNoData;
+        optional<float>  _noDataHeight;
     };
 }
 

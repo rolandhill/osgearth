@@ -52,7 +52,8 @@ public:
         const TileKey&           key,
         osg::ref_ptr<TileModel>& out_model,
         bool&                    out_hasRealData,
-        bool&                    out_hasLodBlendedLayers );
+        bool&                    out_hasLodBlendedLayers,
+        float default_height );
 
 private:
     const Map*                                   _map;

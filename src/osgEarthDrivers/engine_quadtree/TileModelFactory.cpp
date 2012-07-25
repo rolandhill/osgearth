@@ -32,10 +32,10 @@ namespace
 {
     struct BuildColorData
     {
-        void init( const TileKey&                      key, 
-                   ImageLayer*                         layer, 
+        void init( const TileKey&                      key,
+                   ImageLayer*                         layer,
                    const MapInfo&                      mapInfo,
-                   const QuadTreeTerrainEngineOptions& opt, 
+                   const QuadTreeTerrainEngineOptions& opt,
                    TileModel*                          model )
         {
             _key      = key;
@@ -57,7 +57,7 @@ namespace
                 _layer->getProfile()                    &&
                 _layer->getProfile()->getSRS()->isSphericalMercator();
 
-            // fetch the image from the layer, falling back on parent keys utils we are 
+            // fetch the image from the layer, falling back on parent keys utils we are
             // able to find one that works.
 
             bool autoFallback = _key.getLevelOfDetail() <= 1;
@@ -77,7 +77,7 @@ namespace
                 }
                 hasDataInExtent = tileSource->hasDataInExtent( ext );
             }
-            
+
             if (hasDataInExtent)
             {
                 while( !geoImage.valid() && imageKey.valid() && _layer->isKeyValid(imageKey) )
@@ -191,7 +191,7 @@ namespace
 
 //------------------------------------------------------------------------
 
-TileModelFactory::TileModelFactory(const Map*                          map, 
+TileModelFactory::TileModelFactory(const Map*                          map,
                                    TileNodeRegistry*                   liveTiles,
                                    const QuadTreeTerrainEngineOptions& terrainOptions ) :
 _map           ( map ),
@@ -203,13 +203,14 @@ _terrainOptions( terrainOptions )
 
 
 void
-TileModelFactory::createTileModel(const TileKey&           key, 
+TileModelFactory::createTileModel(const TileKey&           key,
                                   osg::ref_ptr<TileModel>& out_model,
                                   bool&                    out_hasRealData,
-                                  bool&                    out_hasLodBlendedLayers )
+                                  bool&                    out_hasLodBlendedLayers,
+                                  float                    default_height )
 {
     MapFrame mapf( _map, Map::MASKED_TERRAIN_LAYERS );
-    
+
     const MapInfo& mapInfo = mapf.getMapInfo();
 
     osg::ref_ptr<TileModel> model = new TileModel();
@@ -221,7 +222,7 @@ TileModelFactory::createTileModel(const TileKey&           key,
     // LOD key.
     out_hasRealData = false;
     out_hasLodBlendedLayers = false;
-    
+
     // Fetch the image data and make color layers.
     for( ImageLayerVector::const_iterator i = mapf.imageLayers().begin(); i != mapf.imageLayers().end(); ++i )
     {
@@ -255,7 +256,7 @@ TileModelFactory::createTileModel(const TileKey&           key,
     // OK we are making a tile, so if there's no heightfield yet, make an empty one.
     if ( !model->_elevationData.getHFLayer() )
     {
-        osg::HeightField* hf = HeightFieldUtils::createReferenceHeightField( key.getExtent(), 8, 8 );
+        osg::HeightField* hf = HeightFieldUtils::createReferenceHeightField( key.getExtent(), 8, 8, default_height );
         osgTerrain::HeightFieldLayer* hfLayer = new osgTerrain::HeightFieldLayer( hf );
         hfLayer->setLocator( GeoLocator::createForKey(key, mapInfo) );
         model->_elevationData = TileModel::ElevationData( hfLayer, true );
@@ -305,7 +306,7 @@ TileModelFactory::createTileModel(const TileKey&           key,
         // Check the results and see if we have any real data.
         for( TileModel::ColorDataByUID::const_iterator i = model->_colorData.begin(); i != model->_colorData.end(); ++i )
         {
-            if ( !i->second.isFallbackData() ) 
+            if ( !i->second.isFallbackData() )
             {
                 out_hasRealData = true;
                 break;

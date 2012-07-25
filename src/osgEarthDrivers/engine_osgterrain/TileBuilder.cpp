@@ -52,7 +52,7 @@ struct BuildColorLayer
             _layer->getProfile()                    &&
             _layer->getProfile()->getSRS()->isSphericalMercator();
 
-        // fetch the image from the layer, falling back on parent keys utils we are 
+        // fetch the image from the layer, falling back on parent keys utils we are
         // able to find one that works.
 
         bool autoFallback = _key.getLevelOfDetail() <= 1;
@@ -71,8 +71,8 @@ struct BuildColorLayer
                 ext = layerProfile->clampAndTransformExtent( ext );
             }
             hasDataInExtent = ext.isValid() && tileSource->hasDataInExtent( ext );
-        }        
-        
+        }
+
         if (hasDataInExtent)
         {
             while( !geoImage.valid() && imageKey.valid() && _layer->isKeyValid(imageKey) )
@@ -120,9 +120,9 @@ struct BuildColorLayer
 
         if (geoImage.getImage() && isStreaming)
         {
-            // protected against multi threaded access. This is a requirement in sequential/preemptive mode, 
+            // protected against multi threaded access. This is a requirement in sequential/preemptive mode,
             // for example. This used to be in TextureCompositorTexArray::prepareImage.
-            // TODO: review whether this affects performance.    
+            // TODO: review whether this affects performance.
             geoImage.getImage()->setDataVariance( osg::Object::DYNAMIC );
         }
 
@@ -175,6 +175,7 @@ struct BuildElevLayer
 
             // Put it in the repo
             osgTerrain::HeightFieldLayer* hfLayer = new osgTerrain::HeightFieldLayer( hf.get() );
+            hfLayer->setValidDataOperator(new osgTerrain::NoDataValue(NO_DATA_VALUE));
 
             // Generate a locator.
             hfLayer->setLocator( GeoLocator::createForKey( _key, mapInfo ) );
@@ -282,7 +283,7 @@ TileBuilder::runJob( TileBuilder::Job* job )
 }
 
 void
-TileBuilder::finalizeJob(TileBuilder::Job*   job, 
+TileBuilder::finalizeJob(TileBuilder::Job*   job,
                          osg::ref_ptr<Tile>& out_tile,
                          bool&               out_hasRealData,
                          bool&               out_hasLodBlending)
@@ -304,7 +305,7 @@ TileBuilder::finalizeJob(TileBuilder::Job*   job,
     // OK we are making a tile, so if there's no heightfield yet, make an empty one.
     if ( !repo._elevLayer.getHFLayer() )
     {
-        osg::HeightField* hf = HeightFieldUtils::createReferenceHeightField( key.getExtent(), 8, 8 );
+        osg::HeightField* hf = HeightFieldUtils::createReferenceHeightField( key.getExtent(), 8, 8, _terrainOptions.noDataHeight().value() );
         osgTerrain::HeightFieldLayer* hfLayer = new osgTerrain::HeightFieldLayer( hf );
         hfLayer->setLocator( GeoLocator::createForKey(key, mapInfo) );
         repo._elevLayer = CustomElevLayer( hfLayer, true );
@@ -347,7 +348,7 @@ TileBuilder::finalizeJob(TileBuilder::Job*   job,
     // Check the results and see if we have any real data.
     for( ColorLayersByUID::const_iterator i = repo._colorLayers.begin(); i != repo._colorLayers.end(); ++i )
     {
-        if ( !i->second.isFallbackData() ) 
+        if ( !i->second.isFallbackData() )
         {
             out_hasRealData = true;
             break;
@@ -362,9 +363,9 @@ TileBuilder::finalizeJob(TileBuilder::Job*   job,
 }
 
 void
-TileBuilder::createTile(const TileKey&      key, 
-                        bool                parallelize, 
-                        osg::ref_ptr<Tile>& out_tile, 
+TileBuilder::createTile(const TileKey&      key,
+                        bool                parallelize,
+                        osg::ref_ptr<Tile>& out_tile,
                         bool&               out_hasRealData,
                         bool&               out_hasLodBlendedLayers )
 {
@@ -434,7 +435,7 @@ TileBuilder::createTile(const TileKey&      key,
         // Wait for all the jobs to finish.
         semaphore.wait();
     }
-    
+
     // Fetch the image data serially:
     else
     {
@@ -454,7 +455,7 @@ TileBuilder::createTile(const TileKey&      key,
                     out_hasLodBlendedLayers = true;
             }
         }
-        
+
         // make an elevation layer.
         BuildElevLayer build;
         build.init( key, mapf, _terrainOptions, repo );
@@ -470,7 +471,7 @@ TileBuilder::createTile(const TileKey&      key,
     // OK we are making a tile, so if there's no heightfield yet, make an empty one.
     if ( !repo._elevLayer.getHFLayer() )
     {
-        osg::HeightField* hf = HeightFieldUtils::createReferenceHeightField( key.getExtent(), 8, 8 );
+        osg::HeightField* hf = HeightFieldUtils::createReferenceHeightField( key.getExtent(), 8, 8, _terrainOptions.noDataHeight().value() );
         //osg::HeightField* hf = key.getProfile()->getVerticalSRS()->createReferenceHeightField( key.getExtent(), 8, 8 );
         osgTerrain::HeightFieldLayer* hfLayer = new osgTerrain::HeightFieldLayer( hf );
         hfLayer->setLocator( GeoLocator::createForKey(key, mapInfo) );
@@ -516,7 +517,7 @@ TileBuilder::createTile(const TileKey&      key,
         // Check the results and see if we have any real data.
         for( ColorLayersByUID::const_iterator i = repo._colorLayers.begin(); i != repo._colorLayers.end(); ++i )
         {
-            if ( !i->second.isFallbackData() ) 
+            if ( !i->second.isFallbackData() )
             {
                 out_hasRealData = true;
                 break;

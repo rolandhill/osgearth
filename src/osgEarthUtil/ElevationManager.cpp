@@ -124,11 +124,11 @@ ElevationManager::getElevationImpl(double x, double y,
         out_elevation = 0.0;
         return true;
     }
-   
+
     // this is the ideal LOD for the requested resolution:
     unsigned int idealLevel = resolution > 0.0
         ? _mapf.getProfile()->getLevelOfDetailForHorizResolution( resolution, _tileSize )
-        : _maxDataLevel;        
+        : _maxDataLevel;
 
     // based on the heightfields available, this is the best we can theorically do:
     unsigned int bestAvailLevel = osg::minimum( idealLevel, _maxDataLevel );
@@ -136,7 +136,7 @@ ElevationManager::getElevationImpl(double x, double y,
     {
         bestAvailLevel = osg::minimum(bestAvailLevel, (unsigned int)_maxLevelOverride);
     }
-    
+
     // transform the input coords to map coords:
     double map_x = x, map_y = y;
     if ( srs && !srs->isEquivalentTo( _mapf.getProfile()->getSRS() ) )
@@ -170,7 +170,7 @@ ElevationManager::getElevationImpl(double x, double y,
             tile = i->second.get();
     }
 
-         
+
     // if we found it, make sure it has a heightfield in it:
     if ( tile.valid() )
     {
@@ -239,6 +239,11 @@ ElevationManager::getElevationImpl(double x, double y,
         double xInterval = extent.width()  / (double)(hf->getNumColumns()-1);
         double yInterval = extent.height() / (double)(hf->getNumRows()-1);
         out_elevation = (double) HeightFieldUtils::getHeightAtLocation( hf.get(), map_x, map_y, extent.xMin(), extent.yMin(), xInterval, yInterval );
+        if(out_elevation == NO_DATA_VALUE)
+        {
+            return false;
+        }
+
         return true;
     }
     else // ( _technique == TECHNIQUE_GEOMETRIC )
@@ -288,7 +293,7 @@ ElevationManager::getElevationImpl(double x, double y,
             out_elevation = (isectPoint-end).length2() > (zero-end).length2()
                 ? (isectPoint-zero).length()
                 : -(isectPoint-zero).length();
-            return true;            
+            return true;
         }
 
         OE_WARN << "ElevationManager: no intersections" << std::endl;
@@ -297,7 +302,7 @@ ElevationManager::getElevationImpl(double x, double y,
 }
 
 
-bool 
+bool
 ElevationManager::getPlacementMatrix(double x, double y, double z,
                                      double resolution,
                                      const SpatialReference* srs,

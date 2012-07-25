@@ -42,8 +42,8 @@ using namespace OpenThreads;
 
 // setting this will enable "fast GL object release" - the engine will activity
 // track tiles that expire from the scene graph, and will explicity force them
-// to deallocate their GL objects (instead of waiting for OSG to "lazily" 
-// release them). This is helpful for freeing up memory more quickly when 
+// to deallocate their GL objects (instead of waiting for OSG to "lazily"
+// release them). This is helpful for freeing up memory more quickly when
 // aggresively navigating a map.
 #define QUICK_RELEASE_GL_OBJECTS 1
 
@@ -51,7 +51,7 @@ using namespace OpenThreads;
 
 //----------------------------------------------------------------------------
 
-// this progress callback checks to see whether the request being serviced is 
+// this progress callback checks to see whether the request being serviced is
 // out of date with respect to the task service that is running it. It checks
 // for a disparity in frame stamps, and reports that the request should be
 // canceled if it appears the request has been abandoned by the Tile that
@@ -65,7 +65,7 @@ public:
     {
     }
 
-    //todo: maybe we should pass TaskRequest in as an argument 
+    //todo: maybe we should pass TaskRequest in as an argument
     bool reportProgress(double current, double total)
     {
         //Check to see if we were marked cancelled on a previous check
@@ -88,10 +88,10 @@ public:
 struct TileLayerRequest : public TaskRequest
 {
     TileLayerRequest( const TileKey& key, const MapFrame& mapf, OSGTileFactory* tileFactory )
-        : _key( key ), 
-          _mapf(mapf, "osgterrain.TileLayerRequest"), 
-          _tileFactory(tileFactory), 
-          _numTries(0), 
+        : _key( key ),
+          _mapf(mapf, "osgterrain.TileLayerRequest"),
+          _tileFactory(tileFactory),
+          _numTries(0),
           _maxTries(3) { }
 
     TileKey _key;
@@ -149,7 +149,7 @@ struct TileElevationPlaceholderLayerRequest : public TileLayerRequest
 
     void setParentHF( osg::HeightField* parentHF )
     {
-        _parentHF = parentHF; 
+        _parentHF = parentHF;
     }
 
     void setNextLOD( int nextLOD )
@@ -372,13 +372,13 @@ CustomTile::incrementTileRevision()
 }
 
 void
-CustomTile::setHasElevationHint( bool hint ) 
+CustomTile::setHasElevationHint( bool hint )
 {
     _hasElevation = hint;
 }
 
 bool
-CustomTile::isElevationLayerUpToDate() const 
+CustomTile::isElevationLayerUpToDate() const
 {
     return _elevationLayerUpToDate;
 }
@@ -419,9 +419,9 @@ CustomTile::setCustomColorLayer( const CustomColorLayer& layer, bool writeLock )
         ColorLayersByUID::const_iterator i = _colorLayers.find(layer.getUID());
         if ( i != _colorLayers.end() && i->second.getMapLayer()->isDynamic() )
             --delta;
-        
+
        _colorLayers[layer.getUID()] = layer;
-       
+
         if ( layer.getMapLayer()->isDynamic() )
             ++delta;
 
@@ -518,10 +518,14 @@ CustomTile::computeBound() const
     osg::BoundingSphere bs;
 
     if (_elevationLayer.valid())
-    {        
+    {
         if (!_elevationLayer->getLocator()) return bs;
 
         osg::BoundingBox bb;
+        osg::Vec3d ndc, v;
+        float minValue, maxValue;
+        bool initMinMax = false;
+
         unsigned int numColumns = _elevationLayer->getNumColumns();
         unsigned int numRows = _elevationLayer->getNumRows();
         for(unsigned int r=0;r<numRows;++r)
@@ -530,22 +534,44 @@ CustomTile::computeBound() const
             {
                 float value = 0.0f;
                 bool validValue = _elevationLayer->getValidValue(c,r, value);
-                if (validValue) 
+                if (validValue)
                 {
                     //Multiply by the vertical scale.
                     value *= _verticalScale;
-                    osg::Vec3d ndc, v;
-                    ndc.x() = ((double)c)/(double)(numColumns-1), 
-                        ndc.y() = ((double)r)/(double)(numRows-1);
-                    ndc.z() = value;
 
-                    if (_elevationLayer->getLocator()->convertLocalToModel(ndc, v))
+                    //Find the minimum and maximum z
+                    if(!initMinMax)
                     {
-                        bb.expandBy(v);
+                        minValue = value;
+                        maxValue = value;
+                        initMinMax = true;
+                    }
+                    else
+                    {
+                        if(value < minValue) minValue = value;
+                        if(value > maxValue) maxValue = value;
                     }
                 }
             }
         }
+
+        // Calculate the bounds of the full tile, even if it is partially missing
+        ndc.x() = 0;
+        ndc.y() = 0;
+        ndc.z() = minValue;
+        if (_elevationLayer->getLocator()->convertLocalToModel(ndc, v))
+        {
+            bb.expandBy(v);
+        }
+
+        ndc.x() = 1;
+        ndc.y() = 1;
+        ndc.z() = maxValue;
+        if (_elevationLayer->getLocator()->convertLocalToModel(ndc, v))
+        {
+            bb.expandBy(v);
+        }
+
         bs.expandBy(bb);
 
     }
@@ -558,7 +584,7 @@ CustomTile::computeBound() const
     }
 
     return bs;
-    
+
 }
 
 // returns TRUE if it's safe for this tile to load its next elevation data layer.
@@ -577,7 +603,7 @@ CustomTile::readyForNewElevation()
     }
     else
     {
-        for( int i=Relative::PARENT; i<=Relative::SOUTH; i++) 
+        for( int i=Relative::PARENT; i<=Relative::SOUTH; i++)
         {
             if ( _family[i].expected && _family[i].elevLOD >= 0 && _family[i].elevLOD < _elevationLOD )
             {
@@ -625,10 +651,10 @@ CustomTile::readyForNewImagery(ImageLayer* layer, int currentLOD)
     }
     else
     {
-        for( int i=Relative::PARENT; i<=Relative::SOUTH; i++) 
+        for( int i=Relative::PARENT; i<=Relative::SOUTH; i++)
         {
-            if (_family[i].expected && 
-                _family[i].getImageLOD( layer->getUID() ) >= 0 && 
+            if (_family[i].expected &&
+                _family[i].getImageLOD( layer->getUID() ) >= 0 &&
                 _family[i].getImageLOD( layer->getUID() ) < currentLOD )
             {
                 ready = false;
@@ -638,7 +664,7 @@ CustomTile::readyForNewImagery(ImageLayer* layer, int currentLOD)
 
         // if the next LOD is not the final, but our placeholder is up to date, we're not ready.
         if (ready &&
-            currentLOD + 1 < (int)_key.getLevelOfDetail() && 
+            currentLOD + 1 < (int)_key.getLevelOfDetail() &&
             currentLOD == _family[Relative::PARENT].getImageLOD( layer->getUID() ) )
         {
             ready = false;
@@ -667,7 +693,7 @@ CustomTile::installRequests( const MapFrame& mapf, int stamp )
 
     if ( hasElevationLayer )
     {
-        resetElevationRequests( mapf );     
+        resetElevationRequests( mapf );
     }
 
     // safely loop through the map layers and schedule imagery updates for each:
@@ -725,7 +751,7 @@ CustomTile::updateImagery( ImageLayer* imageLayer, const MapFrame& mapf, OSGTile
     r->setState( osgEarth::TaskRequest::STATE_IDLE );
 
     // in image-sequential mode, we want to prioritize lower-LOD imagery since it
-    // needs to come in before higher-resolution stuff. 
+    // needs to come in before higher-resolution stuff.
     if ( terrain->getLoadingPolicy().mode() == LoadingPolicy::MODE_SEQUENTIAL )
     {
         r->setPriority( -(float)_key.getLevelOfDetail() + PRI_IMAGE_OFFSET );
@@ -736,7 +762,7 @@ CustomTile::updateImagery( ImageLayer* imageLayer, const MapFrame& mapf, OSGTile
         r->setPriority( PRI_IMAGE_OFFSET + (float)_key.getLevelOfDetail());
     }
 
-    r->setProgressCallback( new StampedProgressCallback( 
+    r->setProgressCallback( new StampedProgressCallback(
         r,
         terrain->getImageryTaskService( imageLayer->getUID() ) ) );
 
@@ -757,7 +783,7 @@ CustomTile::updateImagery( ImageLayer* imageLayer, const MapFrame& mapf, OSGTile
 // This method is called from the CULL TRAVERSAL, from CustomTerrain. //from TileImageBackfillCallback in OSGTileFactory.cpp.
 void
 CustomTile::servicePendingImageRequests( const MapFrame& mapf, int stamp )
-{       
+{
     //Don't do anything until we have been added to the scene graph
     if (!_hasBeenTraversed) return;
 
@@ -784,7 +810,7 @@ CustomTile::servicePendingImageRequests( const MapFrame& mapf, int stamp )
         {
             r->setStamp( stamp );
         }
-    }    
+    }
 }
 
 // This method is called from the UPDATE TRAVERSAL, from CustomTerrain::traverse.
@@ -802,7 +828,7 @@ CustomTile::servicePendingElevationRequests( const MapFrame& mapf, int stamp, bo
     }
 
     if ( _hasElevation && !_elevationLayerUpToDate && _elevRequest.valid() && _elevPlaceholderRequest.valid() )
-    {  
+    {
         CustomTerrain* terrain = getCustomTerrain();
 
         // update the main elevation request if it's running:
@@ -811,7 +837,7 @@ CustomTile::servicePendingElevationRequests( const MapFrame& mapf, int stamp, bo
 #ifdef PREEMPTIVE_DEBUG
             OE_NOTICE << "Tile (" << _key.str() << ") .. ER not idle" << std::endl;
 #endif
-            
+
             if ( !_elevRequest->isCompleted() )
             {
                 _elevRequest->setStamp( stamp );
@@ -842,7 +868,7 @@ CustomTile::servicePendingElevationRequests( const MapFrame& mapf, int stamp, bo
                 OE_NOTICE << "..queued FE req for (" << _key.str() << ")" << std::endl;
 #endif
             }
-            
+
             else if ( _family[Relative::PARENT].elevLOD > _elevationLOD )
             {
                 osg::ref_ptr<CustomTile> parentTile;
@@ -866,7 +892,7 @@ CustomTile::servicePendingElevationRequests( const MapFrame& mapf, int stamp, bo
 #endif
                 }
 
-                else 
+                else
                 {
 #ifdef PREEMPTIVE_DEBUG
                     OE_NOTICE << "...tile (" << _key.str() << ") ready, but nothing to do." << std::endl;
@@ -951,7 +977,7 @@ CustomTile::serviceCompletedRequests( const MapFrame& mapf, bool tileTableLocked
                 // placeholders.
                 checkForFinalImagery = true;
             }
-            else if (lp.mode() == LoadingPolicy::MODE_SEQUENTIAL && 
+            else if (lp.mode() == LoadingPolicy::MODE_SEQUENTIAL &&
                      readyForNewImagery(imageLayer, colorLayer.getLevelOfDetail()) )
             {
                 // in sequential mode, we have to incrementally increase imagery resolution by
@@ -1031,7 +1057,7 @@ CustomTile::serviceCompletedRequests( const MapFrame& mapf, bool tileTableLocked
                                     increment = false;
                                 }
                                 else
-                                {  
+                                {
                                     if (r->_numTries > r->_maxTries)
                                     {
                                         CustomColorLayer oldLayer;
@@ -1081,7 +1107,7 @@ CustomTile::serviceCompletedRequests( const MapFrame& mapf, bool tileTableLocked
             {
                 // If the request was canceled, reset it to IDLE and reset the callback. On the next
                 _elevRequest->setState( TaskRequest::STATE_IDLE );
-                _elevRequest->setProgressCallback( new ProgressCallback() );            
+                _elevRequest->setProgressCallback( new ProgressCallback() );
                 _elevRequest->reset();
             }
             else // success:
@@ -1091,7 +1117,7 @@ CustomTile::serviceCompletedRequests( const MapFrame& mapf, bool tileTableLocked
                 osg::ref_ptr<osgTerrain::HeightFieldLayer> newHFLayer = static_cast<osgTerrain::HeightFieldLayer*>( r->getResult() );
                 if ( newHFLayer.valid() && newHFLayer->getHeightField() != NULL )
                 {
-                    newHFLayer->getHeightField()->setSkirtHeight( 
+                    newHFLayer->getHeightField()->setSkirtHeight(
                         getCustomTerrain()->getTileFactory()->getTerrainOptions().heightFieldSkirtRatio().get()
                         * this->getBound().radius() );
 
@@ -1130,7 +1156,7 @@ CustomTile::serviceCompletedRequests( const MapFrame& mapf, bool tileTableLocked
 
         else if ( _elevPlaceholderRequest->isCompleted() )
         {
-            TileElevationPlaceholderLayerRequest* r = 
+            TileElevationPlaceholderLayerRequest* r =
                 static_cast<TileElevationPlaceholderLayerRequest*>(_elevPlaceholderRequest.get());
 
             if ( r->wasCanceled() )

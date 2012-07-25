@@ -104,8 +104,8 @@ public:
     /**
      * Wraps a tile in a paged LOD and setup up all its parameters
      */
-    osg::Node* prepareTile( 
-        Tile*            tile, 
+    osg::Node* prepareTile(
+        Tile*            tile,
         TerrainNode*         terrain,
         const MapInfo&   mapInfo,
         bool             wrapInPagedLOD );
@@ -125,7 +125,8 @@ public:
     static osg::HeightField* createEmptyHeightField(
         const TileKey& key,
         unsigned       numCols =8,
-        unsigned       numRows =8 );
+        unsigned       numRows =8,
+        float default_height = 0.0f );
 
     osgTerrain::HeightFieldLayer* createPlaceholderHeightfieldLayer(
         osg::HeightField* ancestorHF,

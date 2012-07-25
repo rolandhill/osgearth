@@ -35,16 +35,16 @@ namespace osgEarth
          * Gets the interpolated height value at the specified fractional pixel position.
          */
         static float getHeightAtPixel(
-            const osg::HeightField* hf, 
-            double c, double r, 
+            const osg::HeightField* hf,
+            double c, double r,
             ElevationInterpolation interpoltion = INTERP_BILINEAR);
-        
+
         /**
          * Gets the interpolated height value at the specific geolocation.
          */
         static float getHeightAtLocation(
-            const osg::HeightField* hf, 
-            double x, double y, 
+            const osg::HeightField* hf,
+            double x, double y,
             double llx, double lly,
             double dx, double dy,
             ElevationInterpolation interpolation = INTERP_BILINEAR);
@@ -65,23 +65,24 @@ namespace osgEarth
          * Plate Carre map (in which vertical units are not well defined).
          */
         static void scaleHeightFieldToDegrees( osg::HeightField* hf );
-        
+
         /**
          * Creates a heightfield containing MSL heights for the specified extent.
          * If the SRS (in GeoExtent) has a vertical datum, the height values will be those of
          * its reference geoid. If there is no vertical datum, we assume that MSL == the reference
          * ellipsoid, and all the HF values will be zero.
          */
-        static osg::HeightField* createReferenceHeightField( 
-            const GeoExtent& ex, 
+        static osg::HeightField* createReferenceHeightField(
+            const GeoExtent& ex,
             unsigned         numCols,
-            unsigned         numRows );
+            unsigned         numRows,
+            float           default_height );
 
         /**
          * Subsamples a heightfield to the specified extent.
          */
         static osg::HeightField* createSubSample(
-            osg::HeightField*      input, 
+            osg::HeightField*      input,
             const GeoExtent&       inputEx,
             const GeoExtent&       outputEx,
             ElevationInterpolation interpolation = INTERP_BILINEAR);
@@ -104,16 +105,17 @@ namespace osgEarth
             osg::HeightField* grid,
             const GeoExtent&  extent,
             float             invalidValue,
-            const Geoid*      geoid );
-        
+            const Geoid*      geoid,
+            float default_height = 0.0f);
+
         /**
          * Creates a new cluster culler based on a heightfield.
          * Cluster cullers are for geocentric maps only, and therefore requires
          * the ellipsoid model.
          */
         static osg::NodeCallback* createClusterCullingCallback(
-            osg::HeightField*    grid, 
-            osg::EllipsoidModel* em, 
+            osg::HeightField*    grid,
+            osg::EllipsoidModel* em,
             float verticalScale =1.0f );
     };
 

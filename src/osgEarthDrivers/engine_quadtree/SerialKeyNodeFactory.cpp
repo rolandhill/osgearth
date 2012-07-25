@@ -85,16 +85,16 @@ SerialKeyNodeFactory::addTile(TileModel* model, bool tileHasRealData, bool tileH
     {
         osg::BoundingSphere bs = tileNode->getBound();
         double maxRange = 1e10;
-        
+
 #if 0
         //Compute the min range based on the actual bounds of the tile.  This can break down if you have very high resolution
         //data with elevation variations and you can run out of memory b/c the elevation change is greater than the actual size of the tile so you end up
         //inifinitely subdividing (or at least until you run out of data or memory)
         double minRange = bs.radius() * _options.minTileRangeFactor().value();
-#else        
-        //double origMinRange = bs.radius() * _options.minTileRangeFactor().value();        
+#else
+        //double origMinRange = bs.radius() * _options.minTileRangeFactor().value();
         //Compute the min range based on the 2D size of the tile
-        GeoExtent extent = model->_tileKey.getExtent();        
+        GeoExtent extent = model->_tileKey.getExtent();
         GeoPoint lowerLeft(extent.getSRS(), extent.xMin(), extent.yMin(), 0.0, ALTMODE_ABSOLUTE);
         GeoPoint upperRight(extent.getSRS(), extent.xMax(), extent.yMax(), 0.0, ALTMODE_ABSOLUTE);
         osg::Vec3d ll, ur;
@@ -121,7 +121,7 @@ SerialKeyNodeFactory::addTile(TileModel* model, bool tileHasRealData, bool tileH
 
 #endif
         result = plod;
-        
+
         if ( tileHasLodBlending )
         {
             // Make the LOD transition distance, and a measure of how
@@ -162,14 +162,14 @@ SerialKeyNodeFactory::createRootNode( const TileKey& key )
     bool                    real;
     bool                    lodBlending;
 
-    _modelFactory->createTileModel( key, model, real, lodBlending );
+    _modelFactory->createTileModel( key, model, real, lodBlending, _options.noDataHeight().value() );
 
     // yes, must put the single tile under a tile node group so that it
     // gets registered in the tile node registry
     osg::Group* root = new TileNodeGroup();
 
     addTile( model.get(), real, lodBlending, root );
-    
+
     return root;
 }
 
@@ -185,7 +185,7 @@ SerialKeyNodeFactory::createNode( const TileKey& parentKey )
     {
         TileKey child = parentKey.createChildKey( i );
 
-        _modelFactory->createTileModel( child, models[i], realData[i], lodBlending[i] );
+        _modelFactory->createTileModel( child, models[i], realData[i], lodBlending[i], _options.noDataHeight().value() );
 
         if ( models[i].valid() && realData[i] )
         {

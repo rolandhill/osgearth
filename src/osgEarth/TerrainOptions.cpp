@@ -107,7 +107,9 @@ _mercatorFastPath( true ),
 _minFilter( osg::Texture::LINEAR_MIPMAP_LINEAR ),
 _magFilter( osg::Texture::LINEAR),
 _primaryTraversalMask  ( 0xFFFFFFFF ),
-_secondaryTraversalMask( 0x80000000 )
+_secondaryTraversalMask( 0x80000000 ),
+_rejectNoData( false ),
+_noDataHeight( 0 )
 {
     fromConfig( _conf );
 }
@@ -117,7 +119,7 @@ TerrainOptions::getConfig() const
 {
     Config conf = DriverConfigOptions::getConfig();
     conf.key() = "terrain";
-    
+
     if ( _heightFieldSampleRatio.isSetTo( 0.0f ) )
         conf.update( "sample_ratio", "auto" );
     else
@@ -159,6 +161,9 @@ TerrainOptions::getConfig() const
     conf.updateIfSet("min_filter","NEAREST",               _minFilter,osg::Texture::NEAREST);
     conf.updateIfSet("min_filter","NEAREST_MIPMAP_LINEAR", _minFilter,osg::Texture::NEAREST_MIPMAP_LINEAR);
     conf.updateIfSet("min_filter","NEAREST_MIPMAP_NEAREST",_minFilter,osg::Texture::NEAREST_MIPMAP_NEAREST);
+
+    conf.updateIfSet( "reject_no_data", _rejectNoData);
+    conf.updateIfSet( "no_data_height", _noDataHeight);
 
     return conf;
 }
@@ -208,4 +213,7 @@ TerrainOptions::fromConfig( const Config& conf )
     conf.getIfSet("min_filter","NEAREST",               _minFilter,osg::Texture::NEAREST);
     conf.getIfSet("min_filter","NEAREST_MIPMAP_LINEAR", _minFilter,osg::Texture::NEAREST_MIPMAP_LINEAR);
     conf.getIfSet("min_filter","NEAREST_MIPMAP_NEAREST",_minFilter,osg::Texture::NEAREST_MIPMAP_NEAREST);
+
+    conf.getIfSet( "reject_no_data", _rejectNoData);
+    conf.getIfSet( "no_data_height", _noDataHeight);
 }

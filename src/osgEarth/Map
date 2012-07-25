@@ -33,7 +33,7 @@
 #include <osgDB/ReaderWriter>
 
 namespace osgEarth
-{    
+{
     class MapInfo;
 
     /**
@@ -56,7 +56,7 @@ namespace osgEarth
             UNSPECIFIED
         };
 
-        MapModelChange( ActionType action, Revision mapModeRev, Layer* layer, int firstIndex =-1, int secondIndex =-1 ) 
+        MapModelChange( ActionType action, Revision mapModeRev, Layer* layer, int firstIndex =-1, int secondIndex =-1 )
             : _action(action), _layer(layer), _modelRevision(mapModeRev), _firstIndex(firstIndex), _secondIndex(secondIndex) { }
 
         const ActionType& getAction() const { return _action; }
@@ -81,7 +81,7 @@ namespace osgEarth
      */
     struct OSGEARTH_EXPORT MapCallback : public osg::Referenced
     {
-        virtual void onMapInfoEstablished( const MapInfo& mapInfo ) { } 
+        virtual void onMapInfoEstablished( const MapInfo& mapInfo ) { }
 
         virtual void onMapModelChanged( const MapModelChange& change );
 
@@ -131,7 +131,7 @@ namespace osgEarth
         const MapOptions& getInitialMapOptions() const { return _initMapOptions; }
 
         /**
-         * Gets the map's master profile. This value may not be available until 
+         * Gets the map's master profile. This value may not be available until
          * after autoCalculateProfile has been called.
          */
         const Profile* getProfile() const;
@@ -195,7 +195,7 @@ namespace osgEarth
          */
         ElevationLayer* getElevationLayerAt( int index ) const;
 
-        /** 
+        /**
          * Copies references of the model layers into the output list.
          * This method is thread safe. It returns the map revision that was
          * in effect when the data was copied.
@@ -325,7 +325,7 @@ namespace osgEarth
          */
         void setName( const std::string& name );
 
-        /** 
+        /**
          * Gets the readable name of this map.
          */
         const std::string& getName() const { return _name; }
@@ -334,8 +334,8 @@ namespace osgEarth
          * Creates a heightfield for the region covered by the given TileKey, falling back on
          * lower resolutions if necessary.
          *
-         * NOTE: By default, this method will return a heightfield with HAE (height above ellipsoid) 
-         * values, even if the TileKey profile has an MSL vertical datum. That's because this 
+         * NOTE: By default, this method will return a heightfield with HAE (height above ellipsoid)
+         * values, even if the TileKey profile has an MSL vertical datum. That's because this
          * method is usually called to produce a renderable height field. You can override this
          * behavior by passing in convertToHAE=false.
          *
@@ -347,7 +347,7 @@ namespace osgEarth
          * @param out_hf
          *      Resulting heightfield is written here.
          * @param out_isFallback
-         *      Output flag telling the caller whether the method had to "fall back" on a 
+         *      Output flag telling the caller whether the method had to "fall back" on a
          *      lower level of detail.
          * @param convertToHAE
          *      Whether to return height-above-ellipsoid values in the heightfield, even if the
@@ -363,7 +363,7 @@ namespace osgEarth
             const TileKey&                  key,
             bool                            fallbackIfNeessary,
             osg::ref_ptr<osg::HeightField>& out_hf,
-            bool*                           out_isFallback =0L,            
+            bool*                           out_isFallback =0L,
             bool                            convertToHAE   =true,
             ElevationSamplePolicy           samplePolicy   =SAMPLE_FIRST_VALID,
             ProgressCallback*               progress       =0L)  const;
@@ -395,8 +395,8 @@ namespace osgEarth
          * Synronizes a map frame to the current revision of the map's data model.
          * Returns true if new Map model data was available and a sync occurred;
          * returns false if nothing changed.
-         */    
-        bool sync( class MapFrame& frame ) const;    
+         */
+        bool sync( class MapFrame& frame ) const;
 
         enum ModelParts {
             IMAGE_LAYERS     = 1 << 0,
@@ -414,6 +414,18 @@ namespace osgEarth
         const osgDB::Options* getDBOptions() const { return _dbOptions.get(); }
 
         const Profile* getProfileNoVDatum() const { return _profileNoVDatum.get(); }
+
+        /** Sets the flag to reject NoData cells rather than convert them to 0 */
+        void setRejectNoData(bool val) { _rejectNoData = val; }
+
+        /** Gets the flag to reject NoData cells rather than convert them to 0 */
+        bool getRejectNoData() const { return _rejectNoData; }
+
+        /** Sets the NoData height */
+        void setNoDataHeight(float val) { _noDataHeight = val; }
+
+        /** Gets the NoData height*/
+        float getNoDataHeight() const { return _noDataHeight; }
 
     protected:
 
@@ -436,6 +448,8 @@ namespace osgEarth
         osg::ref_ptr<Cache> _cache;
         Revision _dataModelRevision;
         osg::ref_ptr<osgDB::Options> _dbOptions;
+        bool _rejectNoData;
+        float _noDataHeight;
 
     private:
         void calculateProfile();
@@ -445,7 +459,7 @@ namespace osgEarth
 
 
     /**
-     * A convenience class that combines a general geospatial profile and additional 
+     * A convenience class that combines a general geospatial profile and additional
      * information about the map itself.
      */
     class OSGEARTH_EXPORT MapInfo
@@ -457,7 +471,7 @@ namespace osgEarth
 
         /** dtor */
         virtual ~MapInfo() { }
-        
+
         const Profile* getProfile() const { return _profile.get(); }
         const SpatialReference* getSRS() const { return _profile->getSRS(); }
 
@@ -466,7 +480,7 @@ namespace osgEarth
         bool isPlateCarre() const { return _profile->getSRS()->isPlateCarre(); }
 
         bool isProjectedSRS() const { return !isGeographicSRS(); }
-        bool isGeographicSRS() const { return _profile->getSRS()->isGeographic(); }        
+        bool isGeographicSRS() const { return _profile->getSRS()->isGeographic(); }
 
         ElevationInterpolation getElevationInterpolation() const { return _elevationInterpolation;}
 
@@ -509,7 +523,7 @@ namespace osgEarth
 
         /** Convenience method to access the map's profile */
         const Profile* getProfile() const { return _mapInfo.getProfile(); }
-        
+
 
         /** The image layer stack snapshot */
         const ImageLayerVector& imageLayers() const { return _imageLayers; }
@@ -549,8 +563,8 @@ namespace osgEarth
             const TileKey&                  key,
             bool                            fallback,
             osg::ref_ptr<osg::HeightField>& out_hf,
-            bool*                           out_isFallback =0L,   
-            bool                            convertToHAE   =true,         
+            bool*                           out_isFallback =0L,
+            bool                            convertToHAE   =true,
             ElevationSamplePolicy           samplePolicy   =SAMPLE_FIRST_VALID,
             ProgressCallback*               progress       =0L ) const;
 
@@ -566,7 +580,7 @@ namespace osgEarth
         ElevationLayerVector _elevationLayers;
         ModelLayerVector _modelLayers;
         MaskLayerVector _maskLayers;
-        friend class Map;        
+        friend class Map;
     };
 
 }
