@@ -124,12 +124,16 @@ namespace
                 << "uniform float osgearth_LODRangeFactor; \n";
         }
 
+        if( order.size() > 0)
+        {
         buf << "uniform float osgearth_ImageLayerOpacity[" << maxSlots << "]; \n"
             //The enabled array is a fixed size.  Make sure this corresponds EXCATLY to the size definition in TerrainEngineNode.cpp
             << "uniform bool  osgearth_ImageLayerVisible[" << MAX_IMAGE_LAYERS << "]; \n"
             << "uniform float osgearth_ImageLayerRange[" << 2 * maxSlots << "]; \n"
             << "uniform float osgearth_ImageLayerAttenuation; \n"
             << "uniform float osgearth_CameraElevation; \n";
+
+        }
 
         const TextureLayout::TextureSlotVector& slots = layout.getTextureSlots();
 
@@ -152,7 +156,7 @@ namespace
             << "{ \n"
             << "    vec3 color3 = color.rgb; \n"
             << "    vec4 texel; \n"
-            << "    float maxOpacity = 0.0; \n"
+            << "    float maxOpacity = color.a; \n"
             << "    float dmin, dmax, atten_min, atten_max, age; \n";
 
         for( unsigned int i=0; i < order.size(); ++i )
@@ -403,7 +407,8 @@ TextureCompositorMultiTexture::updateMasterStateSet(osg::StateSet*       stateSe
         }
 
         VirtualProgram* vp = static_cast<VirtualProgram*>( stateSet->getAttribute(VirtualProgram::SA_TYPE) );
-        if ( maxUnits > 0 )
+//        if ( maxUnits > 0 )
+        if(1)
         {
             // see if we have any blended layers:
             bool hasBlending = layout.containsSecondarySlots( maxUnits );
