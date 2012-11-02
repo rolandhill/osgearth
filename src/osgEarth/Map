@@ -62,7 +62,7 @@ namespace osgEarth
         const MapOptions& getInitialMapOptions() const { return _initMapOptions; }
 
         /**
-         * Gets the map's master profile. This value may not be available until 
+         * Gets the map's master profile. This value may not be available until
          * after autoCalculateProfile has been called.
          */
         const Profile* getProfile() const;
@@ -131,7 +131,7 @@ namespace osgEarth
          */
         ElevationLayer* getElevationLayerAt( int index ) const;
 
-        /** 
+        /**
          * Copies references of the model layers into the output list.
          * This method is thread safe. It returns the map revision that was
          * in effect when the data was copied.
@@ -279,7 +279,7 @@ namespace osgEarth
          */
         void setName( const std::string& name );
 
-        /** 
+        /**
          * Gets the readable name of this map.
          */
         const std::string& getName() const { return _name; }
@@ -288,8 +288,8 @@ namespace osgEarth
          * Creates a heightfield for the region covered by the given TileKey, falling back on
          * lower resolutions if necessary.
          *
-         * NOTE: By default, this method will return a heightfield with HAE (height above ellipsoid) 
-         * values, even if the TileKey profile has an MSL vertical datum. That's because this 
+         * NOTE: By default, this method will return a heightfield with HAE (height above ellipsoid)
+         * values, even if the TileKey profile has an MSL vertical datum. That's because this
          * method is usually called to produce a renderable height field. You can override this
          * behavior by passing in convertToHAE=false.
          *
@@ -301,7 +301,7 @@ namespace osgEarth
          * @param out_hf
          *      Resulting heightfield is written here.
          * @param out_isFallback
-         *      Output flag telling the caller whether the method had to "fall back" on a 
+         *      Output flag telling the caller whether the method had to "fall back" on a
          *      lower level of detail.
          * @param convertToHAE
          *      Whether to return height-above-ellipsoid values in the heightfield, even if the
@@ -317,7 +317,7 @@ namespace osgEarth
             const TileKey&                  key,
             bool                            fallbackIfNeessary,
             osg::ref_ptr<osg::HeightField>& out_hf,
-            bool*                           out_isFallback =0L,            
+            bool*                           out_isFallback =0L,
             bool                            convertToHAE   =true,
             ElevationSamplePolicy           samplePolicy   =SAMPLE_FIRST_VALID,
             ProgressCallback*               progress       =0L)  const;
@@ -349,7 +349,7 @@ namespace osgEarth
          * Synronizes a map frame to the current revision of the map's data model.
          * Returns true if new Map model data was available and a sync occurred;
          * returns false if nothing changed.
-         */    
+         */
         bool sync( class MapFrame& frame ) const;
 
         enum ModelParts {
