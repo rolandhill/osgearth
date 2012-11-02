@@ -612,7 +612,6 @@ namespace
                     model_one = model_one - model;
                     model_one.normalize();    
 
-                    //(*normals)[k] = model_one;
                     (*d.normals).push_back(model_one);
 
                     // store the unit extrusion vector and the raw height value.
@@ -1325,6 +1324,8 @@ namespace
                         float e01 = (*d.elevations)[i01];
                         float e11 = (*d.elevations)[i11];
 
+                        if(e00 == NO_DATA_VALUE || e10 == NO_DATA_VALUE || e01 == NO_DATA_VALUE || e11 == NO_DATA_VALUE ) continue;
+
                         osg::Vec3f& v00 = (*d.surfaceVerts)[i00];
                         osg::Vec3f& v10 = (*d.surfaceVerts)[i10];
                         osg::Vec3f& v01 = (*d.surfaceVerts)[i01];
@@ -1457,6 +1458,7 @@ namespace
                     float e01 = boundaryElevations[baseIndex + 2];
                     float e11 = boundaryElevations[baseIndex + 3];
 
+                    if(e00 == NO_DATA_VALUE || e10 == NO_DATA_VALUE || e01 == NO_DATA_VALUE || e11 == NO_DATA_VALUE ) continue;
                    
                     if (!optimizeTriangleOrientation || (e00-e11)<fabsf(e01-e10))
                     {                            
@@ -1543,6 +1545,7 @@ namespace
                     float e01 = boundaryElevations[baseIndex + 2];
                     float e11 = boundaryElevations[baseIndex + 3];
 
+                    if(e00 == NO_DATA_VALUE || e10 == NO_DATA_VALUE || e01 == NO_DATA_VALUE || e11 == NO_DATA_VALUE ) continue;
                    
                     if (!optimizeTriangleOrientation || (e00-e11)<fabsf(e01-e10))
                     {                            
@@ -1629,6 +1632,7 @@ namespace
                     float e01 = boundaryElevations[baseIndex + d.numCols];
                     float e11 = boundaryElevations[baseIndex + d.numCols + 1];
 
+                    if(e00 == NO_DATA_VALUE || e10 == NO_DATA_VALUE || e01 == NO_DATA_VALUE || e11 == NO_DATA_VALUE ) continue;
                    
                     if (!optimizeTriangleOrientation || (e00-e11)<fabsf(e01-e10))
                     {                            
@@ -1716,6 +1720,7 @@ namespace
                     float e01 = boundaryElevations[baseIndex + d.numCols];
                     float e11 = boundaryElevations[baseIndex + d.numCols + 1];
 
+                    if(e00 == NO_DATA_VALUE || e10 == NO_DATA_VALUE || e01 == NO_DATA_VALUE || e11 == NO_DATA_VALUE ) continue;
                    
                     if (!optimizeTriangleOrientation || (e00-e11)<fabsf(e01-e10))
                     {                            

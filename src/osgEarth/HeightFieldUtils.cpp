@@ -435,7 +435,7 @@ HeightFieldUtils::resampleHeightField(osg::HeightField*      input,
 
 
 osg::HeightField*
-HeightFieldUtils::createReferenceHeightField( const GeoExtent& ex, unsigned numCols, unsigned numRows )
+HeightFieldUtils::createReferenceHeightField( const GeoExtent& ex, unsigned numCols, unsigned numRows, float default_height )
 {
     osg::HeightField* hf = new osg::HeightField();
     hf->allocate( numCols, numRows );
@@ -460,7 +460,7 @@ HeightFieldUtils::createReferenceHeightField( const GeoExtent& ex, unsigned numC
             for( unsigned c=0; c<numCols; ++c )
             {
                 double lon = lonMin + lonInterval*(double)c;
-                double offset = vdatum->msl2hae(lat, lon, 0.0);
+                double offset = vdatum->msl2hae(lat, lon, default_height);
                 hf->setHeight( c, r, offset );
             }
         }
@@ -468,7 +468,7 @@ HeightFieldUtils::createReferenceHeightField( const GeoExtent& ex, unsigned numC
     else
     {
         for(unsigned int i=0; i<hf->getHeightList().size(); i++ )
-            hf->getHeightList()[i] = 0.0;
+            hf->getHeightList()[i] = default_height;
     }
 
     hf->setBorderWidth( 0 );
@@ -479,7 +479,8 @@ void
 HeightFieldUtils::resolveInvalidHeights(osg::HeightField* grid,
                                         const GeoExtent&  ex,
                                         float             invalidValue,
-                                        const Geoid*      geoid)
+                                        const Geoid*      geoid,
+                                        float default_height)
 {
     if ( geoid )
     {
@@ -500,7 +501,7 @@ HeightFieldUtils::resolveInvalidHeights(osg::HeightField* grid,
                 double lon = lonMin + lonInterval*(double)c;
                 if ( grid->getHeight(c, r) == invalidValue )
                 {
-                    grid->setHeight( c, r, geoid->getHeight(lat, lon) );
+                    grid->setHeight( c, r, geoid->getHeight(lat, lon) + default_height );
                 }
             }
         }
@@ -511,7 +512,7 @@ HeightFieldUtils::resolveInvalidHeights(osg::HeightField* grid,
         {
             if ( grid->getHeightList()[i] == invalidValue )
             {
-                grid->getHeightList()[i] = 0.0;
+                grid->getHeightList()[i] = default_height;
             }
         }
     }

@@ -1067,7 +1067,9 @@ Map::getHeightField(const TileKey&                  key,
         samplePolicy, 
         out_result,  
         out_isFallback,
-        progress );
+        progress,
+        _rejectNoData,
+        _noDataHeight );
 }
 
 const SpatialReference*

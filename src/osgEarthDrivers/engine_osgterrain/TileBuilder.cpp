@@ -176,6 +176,7 @@ struct BuildElevLayer
 
             // Put it in the repo
             osgTerrain::HeightFieldLayer* hfLayer = new osgTerrain::HeightFieldLayer( hf.get() );
+            hfLayer->setValidDataOperator(new osgTerrain::NoDataValue(NO_DATA_VALUE));
 
             // Generate a locator.
             hfLayer->setLocator( GeoLocator::createForKey( _key, mapInfo ) );
@@ -305,7 +306,7 @@ TileBuilder::finalizeJob(TileBuilder::Job*   job,
     // OK we are making a tile, so if there's no heightfield yet, make an empty one.
     if ( !repo._elevLayer.getHFLayer() )
     {
-        osg::HeightField* hf = HeightFieldUtils::createReferenceHeightField( key.getExtent(), 8, 8 );
+        osg::HeightField* hf = HeightFieldUtils::createReferenceHeightField( key.getExtent(), 8, 8, _terrainOptions.noDataHeight().value() );
         osgTerrain::HeightFieldLayer* hfLayer = new osgTerrain::HeightFieldLayer( hf );
         hfLayer->setLocator( GeoLocator::createForKey(key, mapInfo) );
         repo._elevLayer = CustomElevLayer( hfLayer, true );
@@ -471,7 +472,7 @@ TileBuilder::createTile(const TileKey&      key,
     // OK we are making a tile, so if there's no heightfield yet, make an empty one.
     if ( !repo._elevLayer.getHFLayer() )
     {
-        osg::HeightField* hf = HeightFieldUtils::createReferenceHeightField( key.getExtent(), 8, 8 );
+        osg::HeightField* hf = HeightFieldUtils::createReferenceHeightField( key.getExtent(), 8, 8, _terrainOptions.noDataHeight().value() );
         //osg::HeightField* hf = key.getProfile()->getVerticalSRS()->createReferenceHeightField( key.getExtent(), 8, 8 );
         osgTerrain::HeightFieldLayer* hfLayer = new osgTerrain::HeightFieldLayer( hf );
         hfLayer->setLocator( GeoLocator::createForKey(key, mapInfo) );

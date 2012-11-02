@@ -102,7 +102,9 @@ MapFrame::getHeightField(const TileKey&                  key,
         samplePolicy, 
         out_hf, 
         out_isFallback,
-        progress );    
+        progress,
+        _map->getRejectNoData(),
+        _map->getNoDataHeight() );
 }
 
 
