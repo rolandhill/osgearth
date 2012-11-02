@@ -522,6 +522,10 @@ CustomTile::computeBound() const
         if (!_elevationLayer->getLocator()) return bs;
 
         osg::BoundingBox bb;
+        osg::Vec3d ndc, v;
+        float minValue, maxValue;
+        bool initMinMax = false;
+
         unsigned int numColumns = _elevationLayer->getNumColumns();
         unsigned int numRows = _elevationLayer->getNumRows();
         for(unsigned int r=0;r<numRows;++r)
@@ -534,18 +538,40 @@ CustomTile::computeBound() const
                 {
                     //Multiply by the vertical scale.
                     value *= _verticalScale;
-                    osg::Vec3d ndc, v;
-                    ndc.x() = ((double)c)/(double)(numColumns-1), 
-                        ndc.y() = ((double)r)/(double)(numRows-1);
-                    ndc.z() = value;
 
-                    if (_elevationLayer->getLocator()->convertLocalToModel(ndc, v))
+                    //Find the minimum and maximum z
+                    if(!initMinMax)
                     {
-                        bb.expandBy(v);
+                        minValue = value;
+                        maxValue = value;
+                        initMinMax = true;
+                    }
+                    else
+                    {
+                        if(value < minValue) minValue = value;
+                        if(value > maxValue) maxValue = value;
                     }
                 }
             }
         }
+
+        // Calculate the bounds of the full tile, even if it is partially missing
+        ndc.x() = 0;
+        ndc.y() = 0;
+        ndc.z() = minValue;
+        if (_elevationLayer->getLocator()->convertLocalToModel(ndc, v))
+        {
+            bb.expandBy(v);
+        }
+
+        ndc.x() = 1;
+        ndc.y() = 1;
+        ndc.z() = maxValue;
+        if (_elevationLayer->getLocator()->convertLocalToModel(ndc, v))
+        {
+            bb.expandBy(v);
+        }
+
         bs.expandBy(bb);
 
     }

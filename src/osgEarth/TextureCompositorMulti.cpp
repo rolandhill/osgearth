@@ -133,6 +133,7 @@ namespace
                 << "uniform float osgearth_CameraElevation; \n";
         }
 
+
         const TextureLayout::TextureSlotVector& slots = layout.getTextureSlots();
 
         for( int i = 0; i < maxSlots && i < (int)slots.size(); ++i )
@@ -154,7 +155,7 @@ namespace
             << "{ \n"
             << "    vec3 color3 = color.rgb; \n"
             << "    vec4 texel; \n"
-            << "    float maxOpacity = 0.0; \n"
+            << "    float maxOpacity = color.a; \n"
             << "    float dmin, dmax, atten_min, atten_max, age; \n";
 
         for( unsigned int i=0; i < order.size(); ++i )

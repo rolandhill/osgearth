@@ -777,6 +777,29 @@ SkyNode::initialize( Map *map, const std::string& starFile )
     setDateTime( 2011, 3, 6, 18 );
 }
 
+SkyNode::SkyNode( osg::EllipsoidModel* ellipsoid, const std::string& starFile )
+{
+    // intialize the default settings:
+    _defaultPerViewData._lightPos.set( osg::Vec3f(0.0f, 1.0f, 0.0f) );
+    _defaultPerViewData._light = new osg::Light( 0 );
+    _defaultPerViewData._light->setPosition( osg::Vec4( _defaultPerViewData._lightPos, 0 ) );
+    _defaultPerViewData._light->setAmbient( osg::Vec4(0.4f, 0.4f, 0.4f ,1.0) );
+    _defaultPerViewData._light->setDiffuse( osg::Vec4(1,1,1,1) );
+    _defaultPerViewData._light->setSpecular( osg::Vec4(0,0,0,1) );
+    _defaultPerViewData._starsVisible = true;
+
+    // set up the astronomical parameters:
+    _ellipsoidModel =  ellipsoid;
+    _innerRadius = _ellipsoidModel->getRadiusPolar();
+    _outerRadius = _innerRadius * 1.025f;
+    _sunDistance = _innerRadius * 12000.0f;
+
+    // make the ephemeris (note: order is important here)
+    makeAtmosphere( _ellipsoidModel.get() );
+    makeSun();
+    makeStars(starFile);
+}
+
 osg::BoundingSphere
 SkyNode::computeBound() const
 {

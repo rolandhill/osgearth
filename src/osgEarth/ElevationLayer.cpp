@@ -148,7 +148,7 @@ void
 ElevationLayer::removeCallback( ElevationLayerCallback* cb )
 {
     ElevationLayerCallbackList::iterator i = std::find( _callbacks.begin(), _callbacks.end(), cb );
-    if ( i != _callbacks.end() ) 
+    if ( i != _callbacks.end() )
         _callbacks.erase( i );
 }
 
@@ -227,7 +227,7 @@ ElevationLayer::createHeightFieldFromTileSource(const TileKey&    key,
                     result );
             }
         }
-        
+
         // Blacklist the tile if it is the same projection as the source and we can't get it and it wasn't cancelled
         if ( !result && (!progress || !progress->isCanceled()))
         {
@@ -271,7 +271,7 @@ ElevationLayer::createHeightFieldFromTileSource(const TileKey&    key,
 osg::HeightField*
 ElevationLayer::assembleHeightFieldFromTileSource(const TileKey&    key,
                                                   ProgressCallback* progress)
-{			
+{
     osg::HeightField* result = 0L;
 
     // Collect the heightfields for each of the intersecting tiles.
@@ -283,7 +283,7 @@ ElevationLayer::assembleHeightFieldFromTileSource(const TileKey&    key,
 
 
     //Maintain a list of heightfield tiles that have been added to the list already.
-    std::set< osgTerrain::TileID > existingTiles; 
+    std::set< osgTerrain::TileID > existingTiles;
 
     // collect heightfield for each intersecting key. Note, we're hitting the
     // underlying tile source here, so there's no vetical datum shifts happening yet.
@@ -302,7 +302,7 @@ ElevationLayer::assembleHeightFieldFromTileSource(const TileKey&    key,
                     heightFields.push_back( GeoHeightField(hf, layerKey.getExtent()) );
                 }
                 else
-                { 
+                {
                     // We couldn't get a heightfield at the given key so fall back on parent tiles
                     TileKey parentKey = layerKey.createParentKey();
                     while (!hf && parentKey.valid())
@@ -311,22 +311,22 @@ ElevationLayer::assembleHeightFieldFromTileSource(const TileKey&    key,
                         // This could happen if you have multiple high resolution tiles that dont' have data.
                         // So if you have four level 5 tiles with no data, they will fall back on the same level 4 tile.
                         // This existingTiles check makes sure we don't process and add the same tile multiple times
-                        if (existingTiles.find(parentKey.getTileId()) == existingTiles.end()) 
+                        if (existingTiles.find(parentKey.getTileId()) == existingTiles.end())
                         {
                             hf = createHeightFieldFromTileSource( parentKey, progress );
                             if (hf)
                             {
-                                heightFields.push_back( GeoHeightField(hf, parentKey.getExtent()) );                                
+                                heightFields.push_back( GeoHeightField(hf, parentKey.getExtent()) );
                                 existingTiles.insert(parentKey.getTileId());
                                 break;
-                            }                        
+                            }
                             parentKey = parentKey.createParentKey();
-                        }                        
+                        }
                         else
-                        {                            
+                        {
                             break;
-                        }                        
-                    }                    
+                        }
+                    }
                 }
             }
         }
@@ -334,7 +334,7 @@ ElevationLayer::assembleHeightFieldFromTileSource(const TileKey&    key,
 
     // If we actually got a HeightField, resample/reproject it to match the incoming TileKey's extents.
     if (heightFields.size() > 0)
-    {		
+    {
         unsigned int width = 0;
         unsigned int height = 0;
 
@@ -342,12 +342,12 @@ ElevationLayer::assembleHeightFieldFromTileSource(const TileKey&    key,
         {
             if (itr->getHeightField()->getNumColumns() > width)
                 width = itr->getHeightField()->getNumColumns();
-            if (itr->getHeightField()->getNumRows() > height) 
-                height = itr->getHeightField()->getNumRows();                        
+            if (itr->getHeightField()->getNumRows() > height)
+                height = itr->getHeightField()->getNumRows();
         }
 
         //Now sort the heightfields by resolution to make sure we're sampling the highest resolution one first.
-        std::sort( heightFields.begin(), heightFields.end(), GeoHeightField::SortByResolutionFunctor());        
+        std::sort( heightFields.begin(), heightFields.end(), GeoHeightField::SortByResolutionFunctor());
 
         result = new osg::HeightField();
         result->allocate(width, height);
@@ -370,7 +370,7 @@ ElevationLayer::assembleHeightFieldFromTileSource(const TileKey&    key,
                 float elevation = NO_DATA_VALUE;
                 for (GeoHeightFieldVector::iterator itr = heightFields.begin(); itr != heightFields.end(); ++itr)
                 {
-                    // get the elevation value, at the same time transforming it vertically into the 
+                    // get the elevation value, at the same time transforming it vertically into the
                     // requesting key's vertical datum.
                     float e = 0.0;
                     if (itr->getElevation(key.getExtent().getSRS(), x, y, INTERP_BILINEAR, key.getExtent().getSRS(), e))
@@ -379,7 +379,7 @@ ElevationLayer::assembleHeightFieldFromTileSource(const TileKey&    key,
                         break;
                     }
                 }
-                result->setHeight( c, r, elevation );                
+                result->setHeight( c, r, elevation );
             }
         }
     }
@@ -389,7 +389,7 @@ ElevationLayer::assembleHeightFieldFromTileSource(const TileKey&    key,
 
 
 GeoHeightField
-ElevationLayer::createHeightField(const TileKey&    key, 
+ElevationLayer::createHeightField(const TileKey&    key,
                                   ProgressCallback* progress )
 {
     osg::HeightField* result = 0L;
@@ -452,8 +452,8 @@ ElevationLayer::createHeightField(const TileKey&    key,
     }
 
     // cache if necessary
-    if ( result        && 
-         cacheBin      && 
+    if ( result        &&
+         cacheBin      &&
          !fromCache    &&
          getCachePolicy().isCacheWriteable() )
     {
@@ -485,7 +485,7 @@ ElevationLayer::isKeyValid(const TileKey& key) const
     if (!key.valid())
         return false;
 
-    if ( _runtimeOptions.minLevel().isSet() && key.getLOD() < _runtimeOptions.minLevel().value() ) 
+    if ( _runtimeOptions.minLevel().isSet() && key.getLOD() < _runtimeOptions.minLevel().value() )
     {
         return false;
     }
@@ -528,7 +528,9 @@ ElevationLayerVector::createHeightField(const TileKey&                  key,
                                         ElevationSamplePolicy           samplePolicy,
                                         osg::ref_ptr<osg::HeightField>& out_result,
                                         bool*                           out_isFallback,
-                                        ProgressCallback*               progress )  const
+                                        ProgressCallback*               progress,
+                                        bool                            rejectNoData,
+                                        float                           noDataHeight) const
 {
     unsigned lowestLOD = key.getLevelOfDetail();
     bool hfInitialized = false;
@@ -595,7 +597,7 @@ ElevationLayerVector::createHeightField(const TileKey&                  key,
             {
                 //If the layer is offset, add it to the list of offset heightfields
                 if (*layer->getElevationLayerOptions().offset())
-                {                    
+                {
                     offsetHeightFields.push_back( geoHF );
                 }
                 //Otherwise add it to the list of regular heightfields
@@ -612,7 +614,7 @@ ElevationLayerVector::createHeightField(const TileKey&                  key,
     {
         *out_isFallback = (numFallbacks == heightFields.size());
         //OE_NOTICE << "Num fallbacks=" << numFallbacks << " numHeightFields=" << heightFields.size() << " is fallback " << *out_isFallback << std::endl;
-    }   
+    }
 
     if ( heightFields.size() == 0 ) //&& offsetHeightFields.size() == 0 )
     {
@@ -621,10 +623,11 @@ ElevationLayerVector::createHeightField(const TileKey&                  key,
         {
             unsigned defaultSize = _expressTileSize.getOrUse( 8 );
 
-            out_result = HeightFieldUtils::createReferenceHeightField( 
-                keyToUse.getExtent(), 
-                defaultSize, 
-                defaultSize );
+            out_result = HeightFieldUtils::createReferenceHeightField(
+                keyToUse.getExtent(),
+                defaultSize,
+                defaultSize,
+                noDataHeight );
 
             if ( offsetHeightFields.size() == 0 )
             return true;
@@ -679,9 +682,9 @@ ElevationLayerVector::createHeightField(const TileKey&                  key,
             // user did not ask for a tile size; find the biggest among the layers.
             for (GeoHeightFieldVector::const_iterator i = heightFields.begin(); i < heightFields.end(); ++i)
             {
-                if (i->getHeightField()->getNumColumns() > width) 
+                if (i->getHeightField()->getNumColumns() > width)
                     width = i->getHeightField()->getNumColumns();
-                if (i->getHeightField()->getNumRows() > height) 
+                if (i->getHeightField()->getNumRows() > height)
                     height = i->getHeightField()->getNumRows();
             }
         }
@@ -765,7 +768,7 @@ ElevationLayerVector::createHeightField(const TileKey&                  key,
 
     // Replace any NoData areas with the reference value. This is zero for HAE datums,
     // and some geoid height for orthometric datums.
-    if (out_result.valid())
+    if (out_result.valid() && !rejectNoData)
     {
         const Geoid*         geoid = 0L;
         const VerticalDatum* vdatum = key.getProfile()->getSRS()->getVerticalDatum();
@@ -779,12 +782,13 @@ ElevationLayerVector::createHeightField(const TileKey&                  key,
             out_result.get(),
             key.getExtent(),
             NO_DATA_VALUE,
-            geoid );
+            geoid,
+            noDataHeight );
     }
 
     // Initialize the HF values
     if (out_result.valid() && !hfInitialized )
-    {   
+    {
         //Go ahead and set up the heightfield so we don't have to worry about it later
         double minx, miny, maxx, maxy;
         key.getExtent().getBounds(minx, miny, maxx, maxy);
@@ -798,7 +802,7 @@ ElevationLayerVector::createHeightField(const TileKey&                  key,
 
     // Add any "offset" elevation layers to the resulting heightfield
     if (out_result.valid() && offsetHeightFields.size() )
-    {        
+    {
         // calculate the post spacings.
         double minx, miny, maxx, maxy;
         key.getExtent().getBounds(minx, miny, maxx, maxy);
@@ -813,15 +817,15 @@ ElevationLayerVector::createHeightField(const TileKey&                  key,
             {
                 double x = minx + (dx * (double)c);
                 for (unsigned int r = 0; r < out_result->getNumRows(); r++)
-                {                         
+                {
                     double y = miny + (dy * (double)r);
-                    float elevation = 0.0;                    
+                    float elevation = 0.0;
                     if (itr->getElevation(keySRS, x, y, interpolation, keySRS, elevation))
-                    {                    
-                        double h = out_result->getHeight( c, r );                        
-                        h += elevation;                                     
+                    {
+                        double h = out_result->getHeight( c, r );
+                        h += elevation;
                         out_result->setHeight( c, r, h );
-                    }                                
+                    }
                 }
             }
         }

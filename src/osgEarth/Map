@@ -369,6 +369,18 @@ namespace osgEarth
 
         const Profile* getProfileNoVDatum() const { return _profileNoVDatum.get(); }
 
+        /** Sets the flag to reject NoData cells rather than convert them to 0 */
+        void setRejectNoData(bool val) { _rejectNoData = val; }
+
+        /** Gets the flag to reject NoData cells rather than convert them to 0 */
+        bool getRejectNoData() const { return _rejectNoData; }
+
+        /** Sets the NoData height */
+        void setNoDataHeight(float val) { _noDataHeight = val; }
+
+        /** Gets the NoData height*/
+        float getNoDataHeight() const { return _noDataHeight; }
+
     protected:
 
         virtual ~Map();
@@ -390,6 +402,8 @@ namespace osgEarth
         osg::ref_ptr<Cache> _cache;
         Revision _dataModelRevision;
         osg::ref_ptr<osgDB::Options> _dbOptions;
+        bool _rejectNoData;
+        float _noDataHeight;
 
     private:
         void calculateProfile();
