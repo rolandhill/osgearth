@@ -172,7 +172,7 @@ SerialKeyNodeFactory::createRootNode( const TileKey& key )
     bool                    real;
     bool                    lodBlending;
 
-    _modelFactory->createTileModel( key, model, real, lodBlending );
+    _modelFactory->createTileModel( key, model, real, lodBlending, _options.noDataHeight().value() );
 
     // yes, must put the single tile under a tile node group so that it
     // gets registered in the tile node registry
@@ -195,7 +195,7 @@ SerialKeyNodeFactory::createNode( const TileKey& parentKey )
     {
         TileKey child = parentKey.createChildKey( i );
 
-        _modelFactory->createTileModel( child, models[i], realData[i], lodBlending[i] );
+        _modelFactory->createTileModel( child, models[i], realData[i], lodBlending[i], _options.noDataHeight().value() );
 
         if ( models[i].valid() && realData[i] )
         {

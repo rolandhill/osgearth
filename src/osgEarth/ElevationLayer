@@ -47,7 +47,7 @@ namespace osgEarth
         virtual Config getConfig() const { return getConfig(false); }
         virtual Config getConfig( bool isolate ) const;
         virtual void mergeConfig( const Config& conf );
-        
+
     private:
         void fromConfig( const Config& conf );
         void setDefaults();
@@ -112,7 +112,7 @@ namespace osgEarth
     public: // methods
 
         /**
-         * Creates a GeoHeightField for this layer that corresponds to the extents and LOD 
+         * Creates a GeoHeightField for this layer that corresponds to the extents and LOD
          * in the specified TileKey. The returned HeightField will always match the geospatial
          * extents of that TileKey.
          */
@@ -126,10 +126,10 @@ namespace osgEarth
         virtual bool isKeyValid(const TileKey& key) const;
 
     protected:
-        
+
         // creates a geoHF directly from the tile source
-        osg::HeightField* createHeightFieldFromTileSource( 
-            const TileKey&    key, 
+        osg::HeightField* createHeightFieldFromTileSource(
+            const TileKey&    key,
             ProgressCallback* progress);
 
         // assembles tiles from a layer that is not in the same profile as the map, and
@@ -137,7 +137,7 @@ namespace osgEarth
         osg::HeightField* assembleHeightFieldFromTileSource(
             const TileKey&     key,
             ProgressCallback*  progress );
-        
+
         virtual std::string suggestCacheFormat() const;
 
         virtual void initTileSource();
@@ -172,7 +172,9 @@ namespace osgEarth
             ElevationSamplePolicy           samplePolicy,
             osg::ref_ptr<osg::HeightField>& out_result,
             bool*                           out_isFallback,
-            ProgressCallback*               progress ) const;
+            ProgressCallback*               progress,
+            bool                            rejectNoData,
+            float                           noDataHeight) const;
 
     public:
         /** Default ctor */

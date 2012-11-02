@@ -248,9 +248,9 @@ OSGTileFactory::hasMoreLevels( Map* map, const TileKey& key )
 }
 
 osg::HeightField*
-OSGTileFactory::createEmptyHeightField( const TileKey& key, unsigned numCols, unsigned numRows )
+OSGTileFactory::createEmptyHeightField( const TileKey& key, unsigned numCols, unsigned numRows, float default_height )
 {
-    return HeightFieldUtils::createReferenceHeightField( key.getExtent(), numCols, numRows );
+    return HeightFieldUtils::createReferenceHeightField( key.getExtent(), numCols, numRows, default_height );
 }
 
 void
@@ -318,7 +318,7 @@ OSGTileFactory::addPlaceholderHeightfieldLayer(StreamingTile* tile,
         if ( !newHFLayer )
         {
             newHFLayer = new osgTerrain::HeightFieldLayer();
-            newHFLayer->setHeightField( createEmptyHeightField( key, 8, 8 ) );
+            newHFLayer->setHeightField( createEmptyHeightField( key, 8, 8, getTerrainOptions().noDataHeight().get() ) );
             newHFLayer->setLocator( defaultLocator );
             tile->setElevationLOD( -1 );
         }
@@ -560,7 +560,7 @@ OSGTileFactory::createPopulatedTile(const MapFrame&  mapf,
     //where you could have an inset heightfield on one hemisphere and the whole other hemisphere won't show up.
     if ( mapInfo.isGeocentric() && key.getLevelOfDetail() <= 1 && !hf.valid())
     {
-        hf = createEmptyHeightField( key );
+        hf = createEmptyHeightField( key, 8, 8, getTerrainOptions().noDataHeight().get() );
     }
     hasElevation = hf.valid();
 
@@ -616,7 +616,7 @@ OSGTileFactory::createPopulatedTile(const MapFrame&  mapf,
         //We have no heightfield sources, 
         if ( mapf.elevationLayers().size() == 0 )
         {
-            hf = createEmptyHeightField( key );
+            hf = createEmptyHeightField( key, 8, 8, getTerrainOptions().noDataHeight().get() );
         }
         else
         {
@@ -628,7 +628,7 @@ OSGTileFactory::createPopulatedTile(const MapFrame&  mapf,
             else
             {
                 //We couldn't get any heightfield, so just create an empty one.
-                hf = createEmptyHeightField( key );
+                hf = createEmptyHeightField( key, 8, 8, getTerrainOptions().noDataHeight().get() );
             }
         }
     }
@@ -644,6 +644,11 @@ OSGTileFactory::createPopulatedTile(const MapFrame&  mapf,
     osgTerrain::HeightFieldLayer* hf_layer = new osgTerrain::HeightFieldLayer();
     hf_layer->setLocator( locator.get() );
     hf_layer->setHeightField( hf.get() );
+    if(getTerrainOptions().rejectNoData().get())
+    {
+        hf_layer->setValidDataOperator(new osgTerrain::NoDataValue(NO_DATA_VALUE));
+        hf_layer->getHeightField()->setSkirtHeight(0.0f);
+    }
 
     bool isStreaming = 
         _terrainOptions.loadingPolicy()->mode() == LoadingPolicy::MODE_SEQUENTIAL ||
@@ -856,7 +861,7 @@ OSGTileFactory::createHeightFieldLayer( const MapFrame& mapf, const TileKey& key
         if ( exactOnly )
             return NULL;
         else
-            hf = createEmptyHeightField( key );
+            hf = createEmptyHeightField( key, 8, 8, getTerrainOptions().noDataHeight().get() );
     }
 
     // In a Plate Carre tesselation, scale the heightfield elevations from meters to degrees

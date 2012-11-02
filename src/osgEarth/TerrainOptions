@@ -275,6 +275,18 @@ namespace osgEarth
         optional<unsigned>& secondaryTraversalMask() { return _secondaryTraversalMask; }
         const optional<unsigned>& secondaryTraversalMask() const { return _secondaryTraversalMask; }
    
+        /**
+         * Whether to reject NoData values or replace them with 0 (default).
+         */
+        optional<bool>& rejectNoData() { return _rejectNoData; }
+        const optional<bool>& rejectNoData() const { return _rejectNoData; }
+
+        /**
+         * Height for regions with no elevation data
+         */
+        optional<float>& noDataHeight() { return _noDataHeight; }
+        const optional<float>& noDataHeight() const { return _noDataHeight; }
+
     public:
         virtual Config getConfig() const;
 
@@ -308,6 +320,8 @@ namespace osgEarth
         optional<ElevationInterpolation> _elevationInterpolation;
         optional<unsigned> _primaryTraversalMask;
         optional<unsigned> _secondaryTraversalMask;
+        optional<bool>  _rejectNoData;
+        optional<float>  _noDataHeight;
     };
 }
 

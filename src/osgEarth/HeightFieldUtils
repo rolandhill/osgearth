@@ -142,7 +142,8 @@ namespace osgEarth
         static osg::HeightField* createReferenceHeightField( 
             const GeoExtent& ex, 
             unsigned         numCols,
-            unsigned         numRows );
+            unsigned         numRows,
+            float           default_height );
 
         /**
          * Subsamples a heightfield to the specified extent.
@@ -172,7 +173,8 @@ namespace osgEarth
             osg::HeightField* grid,
             const GeoExtent&  extent,
             float             invalidValue,
-            const Geoid*      geoid );
+            const Geoid*      geoid,
+            float default_height = 0.0f);
         
         /**
          * Creates a new cluster culler based on a heightfield.

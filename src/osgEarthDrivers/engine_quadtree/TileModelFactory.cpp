@@ -257,7 +257,8 @@ void
 TileModelFactory::createTileModel(const TileKey&           key, 
                                   osg::ref_ptr<TileModel>& out_model,
                                   bool&                    out_hasRealData,
-                                  bool&                    out_hasLodBlendedLayers )
+                                  bool&                    out_hasLodBlendedLayers,
+                                  float                    default_height )
 {
     MapFrame mapf( _map, Map::MASKED_TERRAIN_LAYERS );
     
@@ -306,7 +307,7 @@ TileModelFactory::createTileModel(const TileKey&           key,
     // OK we are making a tile, so if there's no heightfield yet, make an empty one.
     if ( !model->_elevationData.getHFLayer() )
     {
-        osg::HeightField* hf = HeightFieldUtils::createReferenceHeightField( key.getExtent(), 8, 8 );
+        osg::HeightField* hf = HeightFieldUtils::createReferenceHeightField( key.getExtent(), 8, 8, default_height );
         osgTerrain::HeightFieldLayer* hfLayer = new osgTerrain::HeightFieldLayer( hf );
         hfLayer->setLocator( GeoLocator::createForKey(key, mapInfo) );
         model->_elevationData = TileModel::ElevationData( hfLayer, true );

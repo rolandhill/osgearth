@@ -304,6 +304,11 @@ ElevationQuery::getElevationImpl(const GeoPoint& point,
         extent.xMin(), extent.yMin(), 
         xInterval, yInterval, _mapf.getMapInfo().getElevationInterpolation() );
 
+    if( out_elevation == NO_DATA_VALUE )
+    {
+        out_elevation = 0.0;
+    }
+
     osg::Timer_t end = osg::Timer::instance()->tick();
     _queries++;
     _totalTime += osg::Timer::instance()->delta_s( start, end );

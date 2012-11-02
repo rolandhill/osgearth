@@ -267,6 +267,12 @@ MapNode::init()
     // load and attach the terrain engine, but don't initialize it until we need it
     const TerrainOptions& terrainOptions = _mapNodeOptions.getTerrainOptions();
 
+    //Set a flag in the map to indicate if we need to reject NoData values
+    _map->setRejectNoData(terrainOptions.rejectNoData().get());
+
+    //Set the noDataHeight in the map
+    _map->setNoDataHeight(terrainOptions.noDataHeight().get());
+
     _terrainEngine = TerrainEngineNodeFactory::create( _map.get(), terrainOptions );
     _terrainEngineInitialized = false;
 
