@@ -52,7 +52,7 @@ namespace osgEarth_engine_mp
     struct HFValue {
         osg::ref_ptr<osg::HeightField> _hf;
         bool                           _isFallback;
-    };        
+    };
 
     class HeightFieldCache : public osg::Referenced, public Revisioned
     {
@@ -63,7 +63,7 @@ namespace osgEarth_engine_mp
 
         }
 
-        bool getOrCreateHeightField( 
+        bool getOrCreateHeightField(
                 const MapFrame&                 frame,
                 const TileKey&                  key,
                 bool                            fallback,
@@ -72,7 +72,7 @@ namespace osgEarth_engine_mp
                 bool                            convertToHAE   =true,
                 ElevationSamplePolicy           samplePolicy   =SAMPLE_FIRST_VALID,
                 ProgressCallback*               progress       =0L ) const
-        {                
+        {
             // check the quick cache.
             HFKey cachekey;
             cachekey._key          = key;
@@ -95,7 +95,7 @@ namespace osgEarth_engine_mp
             bool ok = frame.getHeightField( key, fallback, out_hf, &isFallback, convertToHAE, samplePolicy, progress );
 
             if ( ok )
-            {            
+            {
                 // Treat Plate Carre specially by scaling the height values. (There is no need
                 // to do this with an empty heightfield)
                 const MapInfo& mapInfo = frame.getMapInfo();
@@ -150,9 +150,10 @@ namespace osgEarth_engine_mp
         void createTileModel(
             const TileKey&           key,
             osg::ref_ptr<TileModel>& out_model,
-            bool&                    out_hasRealData);
+            bool&                    out_hasRealData,
+            float default_height );
 
-    private:        
+    private:
 
         const Map*                             _map;
         osg::ref_ptr<TileNodeRegistry>         _liveTiles;

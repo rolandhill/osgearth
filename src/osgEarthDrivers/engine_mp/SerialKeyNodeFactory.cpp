@@ -137,7 +137,7 @@ SerialKeyNodeFactory::createTile(TileModel* model,
 #if USE_FILELOCATIONCALLBACK
         dbOptions->setFileLocationCallback( new FileLocationCallback() );
 #endif
-        
+
         result = plod;
     }
     else
@@ -167,7 +167,7 @@ SerialKeyNodeFactory::createRootNode( const TileKey& key )
     osg::ref_ptr<TileModel> model;
     bool                    real;
 
-    _modelFactory->createTileModel( key, model, real );
+    _modelFactory->createTileModel( key, model, real, _options.noDataHeight().value() );
     return createTile( model.get(), real );
 }
 
@@ -181,7 +181,7 @@ SerialKeyNodeFactory::createNode( const TileKey& key, ProgressCallback* progress
     if ( progress && progress->isCanceled() )
         return 0L;
 
-    _modelFactory->createTileModel(key, model, isReal);
+    _modelFactory->createTileModel(key, model, isReal, _options.noDataHeight().value());
 
     if ( progress && progress->isCanceled() )
         return 0L;

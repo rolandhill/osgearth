@@ -35,11 +35,11 @@ namespace
 {
     struct BuildColorData
     {
-        void init( const TileKey&                      key, 
-                   ImageLayer*                         layer, 
+        void init( const TileKey&                      key,
+                   ImageLayer*                         layer,
                    unsigned                            order,
                    const MapInfo&                      mapInfo,
-                   const MPTerrainEngineOptions&       opt, 
+                   const MPTerrainEngineOptions&       opt,
                    TileModel*                          model )
         {
             _key      = key;
@@ -81,7 +81,7 @@ namespace
                 }
                 hasDataInExtent = tileSource->hasDataInExtent( ext );
             }
-            
+
             if (hasDataInExtent)
             {
                 while( !geoImage.valid() && imageKey.valid() && _layer->isKeyValid(imageKey) )
@@ -111,7 +111,7 @@ namespace
             if ( geoImage.valid() )
             {
                 GeoLocator* locator = 0L;
-                
+
                 if ( useMercatorFastPath )
                     locator = new MercatorLocator(geoImage.getExtent());
                 else
@@ -169,7 +169,7 @@ namespace
         }
 
         void execute()
-        {            
+        {
             const MapInfo& mapInfo = _mapf->getMapInfo();
 
             // Request a heightfield from the map, falling back on lower resolution tiles
@@ -250,7 +250,7 @@ namespace
 
 //------------------------------------------------------------------------
 
-TileModelFactory::TileModelFactory(const Map*                          map, 
+TileModelFactory::TileModelFactory(const Map*                          map,
                                    TileNodeRegistry*                   liveTiles,
                                    const MPTerrainEngineOptions& terrainOptions ) :
 _map           ( map ),
@@ -268,12 +268,13 @@ TileModelFactory::getHeightFieldCache() const
 
 
 void
-TileModelFactory::createTileModel(const TileKey&           key, 
+TileModelFactory::createTileModel(const TileKey&           key,
                                   osg::ref_ptr<TileModel>& out_model,
-                                  bool&                    out_hasRealData)
+                                  bool&                    out_hasRealData,
+                                  float                    default_height )
 {
     MapFrame mapf( _map, Map::MASKED_TERRAIN_LAYERS );
-    
+
     const MapInfo& mapInfo = mapf.getMapInfo();
 
     osg::ref_ptr<TileModel> model = new TileModel();
@@ -285,7 +286,7 @@ TileModelFactory::createTileModel(const TileKey&           key,
     // directly to the key, as opposed to fallback data, which is derived from a lower
     // LOD key.
     out_hasRealData = false;
-    
+
     // Fetch the image data and make color layers.
     unsigned order = 0;
     for( ImageLayerVector::const_iterator i = mapf.imageLayers().begin(); i != mapf.imageLayers().end(); ++i )
@@ -296,7 +297,7 @@ TileModelFactory::createTileModel(const TileKey&           key,
         {
             BuildColorData build;
             build.init( key, layer, order, mapInfo, _terrainOptions, model.get() );
-            
+
             bool addedToModel = build.execute();
             if ( addedToModel )
             {
@@ -321,7 +322,7 @@ TileModelFactory::createTileModel(const TileKey&           key,
     // OK we are making a tile, so if there's no heightfield yet, make an empty one.
     if ( !model->_elevationData.getHeightField() )
     {
-        osg::HeightField* hf = HeightFieldUtils::createReferenceHeightField( key.getExtent(), 15, 15 );
+        osg::HeightField* hf = HeightFieldUtils::createReferenceHeightField( key.getExtent(), 15, 15, default_height );
         model->_elevationData = TileModel::ElevationData(
             hf,
             GeoLocator::createForKey(key, mapInfo),
@@ -333,7 +334,7 @@ TileModelFactory::createTileModel(const TileKey&           key,
         // Check the results and see if we have any real data.
         for( TileModel::ColorDataByUID::const_iterator i = model->_colorData.begin(); i != model->_colorData.end(); ++i )
         {
-            if ( !i->second.isFallbackData() ) 
+            if ( !i->second.isFallbackData() )
             {
                 out_hasRealData = true;
                 break;
