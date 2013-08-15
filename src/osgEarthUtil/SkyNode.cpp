@@ -137,7 +137,7 @@ namespace
         geom->addPrimitiveSet( el );
 
 //        OSG_ALWAYS << "s_makeEllipsoidGeometry Bounds: " << geom->computeBound().radius() << " outerRadius: " << outerRadius << std::endl;
-        
+
         return geom;
     }
 
@@ -199,9 +199,9 @@ namespace
         double eccAnom, E0, E1, diff;
 
         double epsilon = osg::DegreesToRadians(0.001);
-        
+
         eccAnom = M + e * sin(M) * (1.0 + e * cos (M));
-        // iterate to achieve a greater precision for larger eccentricities 
+        // iterate to achieve a greater precision for larger eccentricities
         if (e > 0.05)
         {
             E0 = eccAnom;
@@ -260,9 +260,9 @@ namespace
 
             // perihelion anomaly:
             double v =
-                M + 
-                360.0*E*sin(d2r(M))/osg::PI + 
-                900.0*(E*E)*sin(d2r(2*M))/4*osg::PI - 
+                M +
+                360.0*E*sin(d2r(M))/osg::PI +
+                900.0*(E*E)*sin(d2r(2*M))/4*osg::PI -
                 180.0*(E*E*E)*sin(d2r(M))/4.0*osg::PI;
 
             // longitude of the sun in ecliptic coordinates:
@@ -294,7 +294,7 @@ namespace
 
 #if 0
             OE_INFO
-                << "sun lat = " << r2d(sun_lat) 
+                << "sun lat = " << r2d(sun_lat)
                 << ", sun lon = " << r2d(sun_lon)
                 << ", time delta_lon = " << r2d(diff_lon)
                 << ", app sun lon = " << r2d(app_sun_lon)
@@ -333,7 +333,7 @@ namespace
             //double julianDate = getJulianDate( year, month, date );
             //julianDate += hoursUTC /24.0;
             double d = 367*year - 7 * ( year + (month+9)/12 ) / 4 + 275*month/9 + date - 730530;
-            d += (hoursUTC / 24.0);                     
+            d += (hoursUTC / 24.0);
 
             double ecl = osg::DegreesToRadians(23.4393 - 3.563E-7 * d);
 
@@ -345,7 +345,7 @@ namespace
             double M = osg::DegreesToRadians(115.3654 + 13.0649929509 * d);
 
             double E = M + e*(180.0/osg::PI) * sin(M) * ( 1.0 + e * cos(M) );
-            
+
             double xv = a * ( cos(E) - e );
             double yv = a * ( sqrt(1.0 - e*e) * sin(E) );
 
@@ -372,11 +372,11 @@ namespace
             double RA    = atan2(ye, xe);
             double Dec = atan2(ze, sqrt(xe*xe + ye*ye));
 
-            //Just use the average distance from the earth            
+            //Just use the average distance from the earth
             double rg = 6378137.0 + 384400000.0;
-            
+
             // finally, adjust for the time of day (rotation of the earth)
-            double time_r = hoursUTC/24.0; // 0..1            
+            double time_r = hoursUTC/24.0; // 0..1
             double moon_r = RA/TWO_PI; // convert to 0..1
 
             // rotational difference between UTC and current time
@@ -418,29 +418,29 @@ namespace
         "uniform vec3 atmos_v3LightPos;        // The direction vector to the light source \n"
         "uniform vec3 atmos_v3InvWavelength;   // 1 / pow(wavelength,4) for the rgb channels \n"
         "uniform float atmos_fOuterRadius;     // Outer atmosphere radius \n"
-        "uniform float atmos_fOuterRadius2;    // fOuterRadius^2 \n"		
+        "uniform float atmos_fOuterRadius2;    // fOuterRadius^2 \n"
         "uniform float atmos_fInnerRadius;     // Inner planetary radius \n"
         "uniform float atmos_fInnerRadius2;    // fInnerRadius^2 \n"
-        "uniform float atmos_fKrESun;          // Kr * ESun \n"	
-        "uniform float atmos_fKmESun;          // Km * ESun \n"		
-        "uniform float atmos_fKr4PI;           // Kr * 4 * PI \n"	
-        "uniform float atmos_fKm4PI;           // Km * 4 * PI \n"		
-        "uniform float atmos_fScale;           // 1 / (fOuterRadius - fInnerRadius) \n"	
+        "uniform float atmos_fKrESun;          // Kr * ESun \n"
+        "uniform float atmos_fKmESun;          // Km * ESun \n"
+        "uniform float atmos_fKr4PI;           // Kr * 4 * PI \n"
+        "uniform float atmos_fKm4PI;           // Km * 4 * PI \n"
+        "uniform float atmos_fScale;           // 1 / (fOuterRadius - fInnerRadius) \n"
         "uniform float atmos_fScaleDepth;      // The scale depth \n"
-        "uniform float atmos_fScaleOverScaleDepth;     // fScale / fScaleDepth \n"	
-        "uniform int atmos_nSamples; \n"	
-        "uniform float atmos_fSamples; \n"				
+        "uniform float atmos_fScaleOverScaleDepth;     // fScale / fScaleDepth \n"
+        "uniform int atmos_nSamples; \n"
+        "uniform float atmos_fSamples; \n"
 
         "varying vec3 atmos_v3Direction; \n"
         "varying vec3 atmos_mieColor; \n"
         "varying vec3 atmos_rayleighColor; \n"
 
         "vec3 vVec; \n"
-        "float atmos_fCameraHeight;    // The camera's current height \n"		
+        "float atmos_fCameraHeight;    // The camera's current height \n"
         "float atmos_fCameraHeight2;   // fCameraHeight^2 \n";
 
     static char s_atmosphereVertexShared[] =
-        "float atmos_scale(float fCos) \n"	
+        "float atmos_scale(float fCos) \n"
         "{ \n"
         "    float x = 1.0 - fCos; \n"
         "    return atmos_fScaleDepth * exp(-0.00287 + x*(0.459 + x*(3.83 + x*(-6.80 + x*5.25)))); \n"
@@ -458,86 +458,86 @@ namespace
         "    // (which is the near point of the ray passing through the atmosphere) \n"
         "    float B = 2.0 * dot(vVec, v3Ray); \n"
         "    float C = atmos_fCameraHeight2 - atmos_fOuterRadius2; \n"
-        "    float fDet = max(0.0, B*B - 4.0 * C); \n"	
-        "    float fNear = 0.5 * (-B - sqrt(fDet)); \n"		
+        "    float fDet = max(0.0, B*B - 4.0 * C); \n"
+        "    float fNear = 0.5 * (-B - sqrt(fDet)); \n"
 
         "    // Calculate the ray's starting position, then calculate its atmos_ing offset \n"
-        "    vec3 v3Start = vVec + v3Ray * fNear; \n"			
-        "    fFar -= fNear; \n"	
-        "    float fStartAngle = dot(v3Ray, v3Start) / atmos_fOuterRadius; \n"			
+        "    vec3 v3Start = vVec + v3Ray * fNear; \n"
+        "    fFar -= fNear; \n"
+        "    float fStartAngle = dot(v3Ray, v3Start) / atmos_fOuterRadius; \n"
         "    float fStartDepth = exp(-1.0 / atmos_fScaleDepth); \n"
-        "    float fStartOffset = fStartDepth*atmos_scale(fStartAngle); \n"		
+        "    float fStartOffset = fStartDepth*atmos_scale(fStartAngle); \n"
 
-        "    // Initialize the atmos_ing loop variables \n"	
-        "    float fSampleLength = fFar / atmos_fSamples; \n"		
-        "    float fScaledLength = fSampleLength * atmos_fScale; \n"					
-        "    vec3 v3SampleRay = v3Ray * fSampleLength; \n"	
-        "    vec3 v3SamplePoint = v3Start + v3SampleRay * 0.5; \n"	
+        "    // Initialize the atmos_ing loop variables \n"
+        "    float fSampleLength = fFar / atmos_fSamples; \n"
+        "    float fScaledLength = fSampleLength * atmos_fScale; \n"
+        "    vec3 v3SampleRay = v3Ray * fSampleLength; \n"
+        "    vec3 v3SamplePoint = v3Start + v3SampleRay * 0.5; \n"
 
         "    // Now loop through the sample rays \n"
         "    vec3 v3FrontColor = vec3(0.0, 0.0, 0.0); \n"
-        "    vec3 v3Attenuate; \n"  
-        "    for(int i=0; i<atmos_nSamples; i++) \n"		
+        "    vec3 v3Attenuate; \n"
+        "    for(int i=0; i<atmos_nSamples; i++) \n"
         "    { \n"
-        "        float fHeight = length(v3SamplePoint); \n"			
+        "        float fHeight = length(v3SamplePoint); \n"
         "        float fDepth = exp(atmos_fScaleOverScaleDepth * (atmos_fInnerRadius - fHeight)); \n"
-        "        float fLightAngle = dot(atmos_v3LightPos, v3SamplePoint) / fHeight; \n"		
-        "        float fCameraAngle = dot(v3Ray, v3SamplePoint) / fHeight; \n"			
-        "        float fscatter = (fStartOffset + fDepth*(atmos_scale(fLightAngle) - atmos_scale(fCameraAngle))); \n"	
-        "        v3Attenuate = exp(-fscatter * (atmos_v3InvWavelength * atmos_fKr4PI + atmos_fKm4PI)); \n"	
-        "        v3FrontColor += v3Attenuate * (fDepth * fScaledLength); \n"					
-        "        v3SamplePoint += v3SampleRay; \n"		
-        "    } \n"		
+        "        float fLightAngle = dot(atmos_v3LightPos, v3SamplePoint) / fHeight; \n"
+        "        float fCameraAngle = dot(v3Ray, v3SamplePoint) / fHeight; \n"
+        "        float fscatter = (fStartOffset + fDepth*(atmos_scale(fLightAngle) - atmos_scale(fCameraAngle))); \n"
+        "        v3Attenuate = exp(-fscatter * (atmos_v3InvWavelength * atmos_fKr4PI + atmos_fKm4PI)); \n"
+        "        v3FrontColor += v3Attenuate * (fDepth * fScaledLength); \n"
+        "        v3SamplePoint += v3SampleRay; \n"
+        "    } \n"
 
-        "    // Finally, scale the Mie and Rayleigh colors and set up the varying \n"			
-        "    // variables for the pixel shader \n"	
-        "    atmos_mieColor      = v3FrontColor * atmos_fKmESun; \n"				
-        "    atmos_rayleighColor = v3FrontColor * (atmos_v3InvWavelength * atmos_fKrESun); \n"						
-        "    atmos_v3Direction = vVec  - v3Pos; \n"			
-        "} \n"		
+        "    // Finally, scale the Mie and Rayleigh colors and set up the varying \n"
+        "    // variables for the pixel shader \n"
+        "    atmos_mieColor      = v3FrontColor * atmos_fKmESun; \n"
+        "    atmos_rayleighColor = v3FrontColor * (atmos_v3InvWavelength * atmos_fKrESun); \n"
+        "    atmos_v3Direction = vVec  - v3Pos; \n"
+        "} \n"
 
-        "void SkyFromAtmosphere(void) \n"		
+        "void SkyFromAtmosphere(void) \n"
         "{ \n"
         "  // Get the ray from the camera to the vertex, and its length (which is the far \n"
-        "  // point of the ray passing through the atmosphere) \n"		
-        "  vec3 v3Pos = gl_Vertex.xyz; \n"	
-        "  vec3 v3Ray = v3Pos - vVec; \n"			
-        "  float fFar = length(v3Ray); \n"					
-        "  v3Ray /= fFar; \n"				
+        "  // point of the ray passing through the atmosphere) \n"
+        "  vec3 v3Pos = gl_Vertex.xyz; \n"
+        "  vec3 v3Ray = v3Pos - vVec; \n"
+        "  float fFar = length(v3Ray); \n"
+        "  v3Ray /= fFar; \n"
 
         "  // Calculate the ray's starting position, then calculate its atmos_ing offset \n"
         "  vec3 v3Start = vVec; \n"
-        "  float fHeight = length(v3Start); \n"		
+        "  float fHeight = length(v3Start); \n"
         "  float fDepth = exp(atmos_fScaleOverScaleDepth * (atmos_fInnerRadius - atmos_fCameraHeight)); \n"
-        "  float fStartAngle = dot(v3Ray, v3Start) / fHeight; \n"	
+        "  float fStartAngle = dot(v3Ray, v3Start) / fHeight; \n"
         "  float fStartOffset = fDepth*atmos_scale(fStartAngle); \n"
 
-        "  // Initialize the atmos_ing loop variables \n"		
-        "  float fSampleLength = fFar / atmos_fSamples; \n"			
-        "  float fScaledLength = fSampleLength * atmos_fScale; \n"				
-        "  vec3 v3SampleRay = v3Ray * fSampleLength; \n"		
+        "  // Initialize the atmos_ing loop variables \n"
+        "  float fSampleLength = fFar / atmos_fSamples; \n"
+        "  float fScaledLength = fSampleLength * atmos_fScale; \n"
+        "  vec3 v3SampleRay = v3Ray * fSampleLength; \n"
         "  vec3 v3SamplePoint = v3Start + v3SampleRay * 0.5; \n"
 
-        "  // Now loop through the sample rays \n"		
-        "  vec3 v3FrontColor = vec3(0.0, 0.0, 0.0); \n"		
-        "  vec3 v3Attenuate; \n"  
-        "  for(int i=0; i<atmos_nSamples; i++) \n"			
-        "  { \n"	
-        "    float fHeight = length(v3SamplePoint); \n"	
+        "  // Now loop through the sample rays \n"
+        "  vec3 v3FrontColor = vec3(0.0, 0.0, 0.0); \n"
+        "  vec3 v3Attenuate; \n"
+        "  for(int i=0; i<atmos_nSamples; i++) \n"
+        "  { \n"
+        "    float fHeight = length(v3SamplePoint); \n"
         "    float fDepth = exp(atmos_fScaleOverScaleDepth * (atmos_fInnerRadius - fHeight)); \n"
         "    float fLightAngle = dot(atmos_v3LightPos, v3SamplePoint) / fHeight; \n"
-        "    float fCameraAngle = dot(v3Ray, v3SamplePoint) / fHeight; \n"	
-        "    float fscatter = (fStartOffset + fDepth*(atmos_scale(fLightAngle) - atmos_scale(fCameraAngle))); \n"	
-        "    v3Attenuate = exp(-fscatter * (atmos_v3InvWavelength * atmos_fKr4PI + atmos_fKm4PI)); \n"	
-        "    v3FrontColor += v3Attenuate * (fDepth * fScaledLength); \n"		
-        "    v3SamplePoint += v3SampleRay; \n"		
+        "    float fCameraAngle = dot(v3Ray, v3SamplePoint) / fHeight; \n"
+        "    float fscatter = (fStartOffset + fDepth*(atmos_scale(fLightAngle) - atmos_scale(fCameraAngle))); \n"
+        "    v3Attenuate = exp(-fscatter * (atmos_v3InvWavelength * atmos_fKr4PI + atmos_fKm4PI)); \n"
+        "    v3FrontColor += v3Attenuate * (fDepth * fScaledLength); \n"
+        "    v3SamplePoint += v3SampleRay; \n"
         "  } \n"
 
         "  // Finally, scale the Mie and Rayleigh colors and set up the varying \n"
-        "  // variables for the pixel shader \n"					
-        "  atmos_mieColor      = v3FrontColor * atmos_fKmESun; \n"			
-        "  atmos_rayleighColor = v3FrontColor * (atmos_v3InvWavelength * atmos_fKrESun); \n"				
-        "  atmos_v3Direction = vVec - v3Pos; \n"				
+        "  // variables for the pixel shader \n"
+        "  atmos_mieColor      = v3FrontColor * atmos_fKmESun; \n"
+        "  atmos_rayleighColor = v3FrontColor * (atmos_v3InvWavelength * atmos_fKrESun); \n"
+        "  atmos_v3Direction = vVec - v3Pos; \n"
         "} \n";
 
 
@@ -558,20 +558,20 @@ namespace
         "} \n";
 
     static char s_atmosphereFragmentDeclarations[] =
-        "uniform vec3 atmos_v3LightPos; \n"							
-        "uniform float atmos_g; \n"				
+        "uniform vec3 atmos_v3LightPos; \n"
+        "uniform float atmos_g; \n"
         "uniform float atmos_g2; \n"
         "uniform float atmos_fWeather; \n"
 
-        "varying vec3 atmos_v3Direction; \n"	
+        "varying vec3 atmos_v3Direction; \n"
         "varying vec3 atmos_mieColor; \n"
         "varying vec3 atmos_rayleighColor; \n"
 
         "const float fExposure = 4.0; \n";
-        
+
     static char s_atmosphereFragmentMain[] =
-        "void main(void) \n"			
-        "{ \n"				
+        "void main(void) \n"
+        "{ \n"
         "    float fCos = dot(atmos_v3LightPos, atmos_v3Direction) / length(atmos_v3Direction); \n"
         "    float fRayleighPhase = 1.0; \n" // 0.75 * (1.0 + fCos*fCos); \n"
         "    float fMiePhase = 1.5 * ((1.0 - atmos_g2) / (2.0 + atmos_g2)) * (1.0 + fCos*fCos) / fastpow(1.0 + atmos_g2 - 2.0*atmos_g*fCos, 1.5); \n"
@@ -581,7 +581,7 @@ namespace
         "    gl_FragColor.a = (color.r+color.g+color.b) * 2.0; \n"
         "} \n";
 
-    static char s_sunVertexSource[] = 
+    static char s_sunVertexSource[] =
         "varying vec3 atmos_v3Direction; \n"
 
         "void main() \n"
@@ -598,13 +598,13 @@ namespace
 
         "void main( void ) \n"
         "{ \n"
-        "   float fCos = -atmos_v3Direction[2]; \n"         
+        "   float fCos = -atmos_v3Direction[2]; \n"
         "   float fMiePhase = 0.050387596899224826 * (1.0 + fCos*fCos) / fastpow(1.9024999999999999 - -1.8999999999999999*fCos, 1.5); \n"
         "   gl_FragColor.rgb = fMiePhase*vec3(.3,.3,.2); \n"
         "   gl_FragColor.a = sunAlpha*gl_FragColor.r; \n"
         "} \n";
 
-    static char s_moonVertexSource[] = 
+    static char s_moonVertexSource[] =
         "uniform mat4 osg_ModelViewProjectionMatrix;"
         "varying vec4 moon_TexCoord;\n"
         "void main() \n"
@@ -670,7 +670,7 @@ namespace
                 << "#version " << GLSL_VERSION_STR << "\n"
 #ifdef OSG_GLES2_AVAILABLE
                 << "precision highp float;\n"
-#endif  
+#endif
                 << "varying float visibility; \n"
                 << "varying vec4 osg_FrontColor; \n"
                 << "void main( void ) \n"
@@ -717,13 +717,13 @@ DefaultEphemerisProvider::getMoonPosition(const DateTime& date)
 
 //---------------------------------------------------------------------------
 
-SkyNode::SkyNode( Map* map, const std::string& starFile, float minStarMagnitude ) : 
+SkyNode::SkyNode( Map* map, const std::string& starFile, float minStarMagnitude ) :
 _minStarMagnitude(minStarMagnitude)
 {
     initialize(map, starFile);
 }
 
-SkyNode::SkyNode( Map *map, float minStarMagnitude) : 
+SkyNode::SkyNode( Map *map, float minStarMagnitude) :
 _minStarMagnitude(minStarMagnitude)
 {
     initialize(map);
@@ -736,18 +736,18 @@ SkyNode::initialize( Map *map, const std::string& starFile )
 
     // intialize the default settings:
     _defaultPerViewData._lightPos.set( osg::Vec3f(0.0f, 1.0f, 0.0f) );
-    _defaultPerViewData._light = new osg::Light( 0 );  
+    _defaultPerViewData._light = new osg::Light( 0 );
     _defaultPerViewData._light->setPosition( osg::Vec4( _defaultPerViewData._lightPos, 0 ) );
     _defaultPerViewData._light->setAmbient( osg::Vec4(0.2f, 0.2f, 0.2f, 2.0) );
     _defaultPerViewData._light->setDiffuse( osg::Vec4(1,1,1,1) );
     _defaultPerViewData._light->setSpecular( osg::Vec4(0,0,0,1) );
     _defaultPerViewData._starsVisible = true;
     _defaultPerViewData._moonVisible = true;
-    
+
     // set up the uniform that conveys the normalized light position in world space
     _defaultPerViewData._lightPosUniform = new osg::Uniform( osg::Uniform::FLOAT_VEC3, "atmos_v3LightPos" );
     _defaultPerViewData._lightPosUniform->set( _defaultPerViewData._lightPos / _defaultPerViewData._lightPos.length() );
-    
+
     // set up the astronomical parameters:
     _ellipsoidModel = map->getProfile()->getSRS()->getGeographicSRS()->getEllipsoid();
     _innerRadius = _ellipsoidModel->getRadiusPolar();
@@ -800,29 +800,6 @@ SkyNode::SkyNode( osg::EllipsoidModel* ellipsoid, const std::string& starFile )
     makeStars(starFile);
 }
 
-SkyNode::SkyNode( osg::EllipsoidModel* ellipsoid, const std::string& starFile )
-{
-    // intialize the default settings:
-    _defaultPerViewData._lightPos.set( osg::Vec3f(0.0f, 1.0f, 0.0f) );
-    _defaultPerViewData._light = new osg::Light( 0 );
-    _defaultPerViewData._light->setPosition( osg::Vec4( _defaultPerViewData._lightPos, 0 ) );
-    _defaultPerViewData._light->setAmbient( osg::Vec4(0.4f, 0.4f, 0.4f ,1.0) );
-    _defaultPerViewData._light->setDiffuse( osg::Vec4(1,1,1,1) );
-    _defaultPerViewData._light->setSpecular( osg::Vec4(0,0,0,1) );
-    _defaultPerViewData._starsVisible = true;
-
-    // set up the astronomical parameters:
-    _ellipsoidModel =  ellipsoid;
-    _innerRadius = _ellipsoidModel->getRadiusPolar();
-    _outerRadius = _innerRadius * 1.025f;
-    _sunDistance = _innerRadius * 12000.0f;
-
-    // make the ephemeris (note: order is important here)
-    makeAtmosphere( _ellipsoidModel.get() );
-    makeSun();
-    makeStars(starFile);
-}
-
 osg::BoundingSphere
 SkyNode::computeBound() const
 {
@@ -831,7 +808,7 @@ SkyNode::computeBound() const
 
 void
 SkyNode::traverse( osg::NodeVisitor& nv )
-{    
+{
     osgUtil::CullVisitor* cv = Culling::asCullVisitor(nv);
     if ( cv )
     {
@@ -843,18 +820,18 @@ SkyNode::traverse( osg::NodeVisitor& nv )
 
         osg::View* view = cv->getCurrentCamera()->getView();
 
-                
+
         //Try to find the per view data for camera's view if there is one.
         PerViewDataMap::iterator itr = _perViewData.find( view );
-        
+
         if ( itr == _perViewData.end() )
         {
             // If we don't find any per view data, just use the first one that is stored.
-            // This needs to be reworked to be per camera and also to automatically create a 
+            // This needs to be reworked to be per camera and also to automatically create a
             // new data structure on demand since camera's can be added/removed on the fly.
             itr = _perViewData.begin();
         }
-        
+
 
         if ( _autoAmbience )
         {
@@ -936,7 +913,7 @@ SkyNode::attach( osg::View* view, int lightNum )
     data._cullContainer->addChild( data._moonXform.get() );
     data._moonVisible = _defaultPerViewData._moonVisible;
     data._moonXform->setNodeMask( data._moonVisible ? ~0 : 0 );
-    
+
     data._starsXform = new osg::MatrixTransform();
     data._starsMatrix = _defaultPerViewData._starsMatrix;
     data._starsXform->setMatrix( _defaultPerViewData._starsMatrix );
@@ -999,7 +976,7 @@ SkyNode::getAutoAmbience() const
     return _autoAmbience;
 }
 
-void 
+void
 SkyNode::setAmbientBrightness( PerViewData& data, float value )
 {
     value = osg::clampBetween( value, 0.0f, 1.0f );
@@ -1051,8 +1028,8 @@ SkyNode::setSunPosition( PerViewData& data, const osg::Vec3& pos )
 
     if ( data._sunXform.valid() )
     {
-        data._sunXform->setMatrix( osg::Matrix::translate( 
-            _sunDistance * data._lightPos.x(), 
+        data._sunXform->setMatrix( osg::Matrix::translate(
+            _sunDistance * data._lightPos.x(),
             _sunDistance * data._lightPos.y(),
             _sunDistance * data._lightPos.z() ) );
     }
@@ -1067,7 +1044,7 @@ SkyNode::setSunPosition( double lat_degrees, double long_degrees, osg::View* vie
         _ellipsoidModel->convertLatLongHeightToXYZ(
             osg::RadiansToDegrees(lat_degrees),
             osg::RadiansToDegrees(long_degrees),
-            0, 
+            0,
             x, y, z);
         osg::Vec3d up  = _ellipsoidModel->computeLocalUpVector(x, y, z);
         setSunPosition( up, view );
@@ -1087,7 +1064,7 @@ SkyNode::setMoonPosition( PerViewData& data, const osg::Vec3d& pos )
 
 void
 SkyNode::getDateTime( DateTime& out, osg::View* view ) const
-{    
+{
     if ( view )
     {
         PerViewDataMap::const_iterator i = _perViewData.find(view);
@@ -1119,7 +1096,7 @@ SkyNode::getDateTime(int& year, int& month, int& date, double& hoursUTC, osg::Vi
 
 void
 SkyNode::setDateTime(const DateTime& dt, osg::View* view)
-{    
+{
     if ( _ellipsoidModel.valid() )
     {
         osg::Vec3d sunPosition;
@@ -1173,7 +1150,7 @@ SkyNode::setDateTime( int year, int month, int date, double hoursUTC, osg::View*
     // backwards compatibility
     setDateTime( DateTime(year, month, date, hoursUTC), view );
 
-    OE_WARN << LC << 
+    OE_WARN << LC <<
         "The method setDateTime(int,int,int,double,View*) is deprecated; "
         "please use setDateTime(const DateTime&, View*) instead"
         << std::endl;
@@ -1255,7 +1232,7 @@ SkyNode::makeAtmosphere( const osg::EllipsoidModel* em )
 {
     // create some skeleton geometry to shade:
     osg::Geometry* drawable = s_makeEllipsoidGeometry( em, _outerRadius );
-    
+
     osg::Geode* geode = new osg::Geode();
     geode->addDrawable( drawable );
 
@@ -1331,8 +1308,8 @@ SkyNode::makeAtmosphere( const osg::EllipsoidModel* em )
         set->getOrCreateUniform( "atmos_fSamples",        osg::Uniform::FLOAT )->set( (float)Samples );
         set->getOrCreateUniform( "atmos_fWeather",        osg::Uniform::FLOAT )->set( Weather );
     }
-    
-    // A nested camera isolates the projection matrix calculations so the node won't 
+
+    // A nested camera isolates the projection matrix calculations so the node won't
     // affect the clip planes in the rest of the scene.
     osg::Camera* cam = new osg::Camera();
     cam->getOrCreateStateSet()->setRenderBinDetails( BIN_ATMOSPHERE, "RenderBin" );
@@ -1352,7 +1329,7 @@ SkyNode::makeSun()
 
     float sunRadius = _innerRadius * 100.0f;
 
-    sun->addDrawable( s_makeDiscGeometry( sunRadius*80.0f ) ); 
+    sun->addDrawable( s_makeDiscGeometry( sunRadius*80.0f ) );
 
     osg::StateSet* set = sun->getOrCreateStateSet();
     set->setMode( GL_BLEND, 1 );
@@ -1387,13 +1364,13 @@ SkyNode::makeSun()
     // make the sun's transform:
     // todo: move this?
     _defaultPerViewData._sunXform = new osg::MatrixTransform();
-    _defaultPerViewData._sunXform->setMatrix( osg::Matrix::translate( 
-        _sunDistance * _defaultPerViewData._lightPos.x(), 
-        _sunDistance * _defaultPerViewData._lightPos.y(), 
+    _defaultPerViewData._sunXform->setMatrix( osg::Matrix::translate(
+        _sunDistance * _defaultPerViewData._lightPos.x(),
+        _sunDistance * _defaultPerViewData._lightPos.y(),
         _sunDistance * _defaultPerViewData._lightPos.z() ) );
     _defaultPerViewData._sunXform->addChild( sun );
 
-    // A nested camera isolates the projection matrix calculations so the node won't 
+    // A nested camera isolates the projection matrix calculations so the node won't
     // affect the clip planes in the rest of the scene.
     osg::Camera* cam = new osg::Camera();
     cam->getOrCreateStateSet()->setRenderBinDetails( BIN_SUN, "RenderBin" );
@@ -1407,10 +1384,10 @@ SkyNode::makeSun()
 void
 SkyNode::makeMoon()
 {
-    osg::ref_ptr< osg::EllipsoidModel > em = new osg::EllipsoidModel( 1738140.0, 1735970.0 );   
+    osg::ref_ptr< osg::EllipsoidModel > em = new osg::EllipsoidModel( 1738140.0, 1735970.0 );
     osg::Geode* moon = new osg::Geode;
     moon->getOrCreateStateSet()->setAttributeAndModes( new osg::Program(), osg::StateAttribute::OFF | osg::StateAttribute::PROTECTED );
-    osg::Geometry* geom = s_makeEllipsoidGeometry( em.get(), em->getRadiusEquator(), true );    
+    osg::Geometry* geom = s_makeEllipsoidGeometry( em.get(), em->getRadiusEquator(), true );
     //TODO:  Embed this texture in code or provide a way to have a default resource directory for osgEarth.
     //       Right now just need to have this file somewhere in your OSG_FILE_PATH
     osg::Image* image = osgDB::readImageFile( "moon_1024x512.jpg" );
@@ -1419,13 +1396,13 @@ SkyNode::makeMoon()
     texture->setFilter(osg::Texture::MAG_FILTER,osg::Texture::LINEAR);
     texture->setResizeNonPowerOfTwoHint(false);
     geom->getOrCreateStateSet()->setTextureAttributeAndModes( 0, texture, osg::StateAttribute::ON | osg::StateAttribute::PROTECTED);
-    
-    osg::Vec4Array* colors = new osg::Vec4Array(1);    
+
+    osg::Vec4Array* colors = new osg::Vec4Array(1);
     geom->setColorArray( colors );
     geom->setColorBinding(osg::Geometry::BIND_OVERALL);
     (*colors)[0] = osg::Vec4(1, 1, 1, 1 );
-    moon->addDrawable( geom  ); 
-    
+    moon->addDrawable( geom  );
+
     osg::StateSet* set = moon->getOrCreateStateSet();
     // configure the stateset
     set->setMode( GL_LIGHTING, osg::StateAttribute::ON );
@@ -1435,11 +1412,11 @@ SkyNode::makeMoon()
     set->setAttributeAndModes( new osg::BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA), osg::StateAttribute::ON );
 
 #ifdef OSG_GLES2_AVAILABLE
-    
+
     if ( Registry::capabilities().supportsGLSL() )
     {
         set->addUniform(new osg::Uniform("moonTex", 0));
-        
+
         // create shaders
         osg::Program* program = new osg::Program();
         osg::Shader* vs = new osg::Shader( osg::Shader::VERTEX, Stringify()
@@ -1455,15 +1432,15 @@ SkyNode::makeMoon()
         set->setAttributeAndModes( program, osg::StateAttribute::ON | osg::StateAttribute::PROTECTED );
     }
 #endif
-    
+
     // make the moon's transform:
     // todo: move this?
-    _defaultPerViewData._moonXform = new osg::MatrixTransform();    
+    _defaultPerViewData._moonXform = new osg::MatrixTransform();
 
     Moon moonModel;
     //Get some default value of the moon
-    osg::Vec3d pos = moonModel.getPosition( 2011, 2, 1, 0 );            
-    _defaultPerViewData._moonXform->setMatrix( osg::Matrix::translate( pos ) ); 
+    osg::Vec3d pos = moonModel.getPosition( 2011, 2, 1, 0 );
+    _defaultPerViewData._moonXform->setMatrix( osg::Matrix::translate( pos ) );
     _defaultPerViewData._moonXform->addChild( moon );
 
     //If we couldn't load the moon texture, turn the moon off
@@ -1474,7 +1451,7 @@ SkyNode::makeMoon()
         _defaultPerViewData._moonVisible = false;
     }
 
-    // A nested camera isolates the projection matrix calculations so the node won't 
+    // A nested camera isolates the projection matrix calculations so the node won't
     // affect the clip planes in the rest of the scene.
     osg::Camera* cam = new osg::Camera();
     cam->getOrCreateStateSet()->setRenderBinDetails( BIN_MOON, "RenderBin" );
@@ -1526,7 +1503,7 @@ SkyNode::buildStarGeometry(const std::vector<StarData>& stars)
   std::vector<StarData>::const_iterator p;
   for( p = stars.begin(); p != stars.end(); p++ )
   {
-    
+
     osg::Vec3d v = getPositionFromRADecl( p->right_ascension, p->declination, _starRadius );
     coords->push_back( v );
 
@@ -1615,7 +1592,7 @@ SkyNode::parseStarFile(const std::string& starFile, std::vector<StarData>& out_s
     if (in.eof())
       break;
 
-    if (line.empty() || line[0] == '#') 
+    if (line.empty() || line[0] == '#')
       continue;
 
     std::stringstream ss(line);
@@ -1633,7 +1610,7 @@ SkyNode::parseStarFile(const std::string& starFile, std::vector<StarData>& out_s
 osg::Vec3d
 SkyNode::getPositionFromRADecl( double ra, double decl, double range )
 {
-    return osg::Vec3(0,range,0) * 
-           osg::Matrix::rotate( decl, 1, 0, 0 ) * 
+    return osg::Vec3(0,range,0) *
+           osg::Matrix::rotate( decl, 1, 0, 0 ) *
            osg::Matrix::rotate( ra - osg::PI_2, 0, 0, 1 );
 }
