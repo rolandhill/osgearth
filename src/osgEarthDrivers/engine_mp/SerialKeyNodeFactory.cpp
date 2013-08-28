@@ -97,7 +97,7 @@ _options         ( options ),
 _terrain         ( terrain ),
 _engineUID       ( engineUID )
 {
-    //nop
+    MPTerrainEngineNode::getEngineByUID(_engineUID, _terrainEngineNode);
 }
 
 
@@ -106,6 +106,7 @@ SerialKeyNodeFactory::createTile(TileModel* model, bool setupChildrenIfNecessary
 {
     // compile the model into a node:
     TileNode* tileNode = _modelCompiler->compile( model, _frame );
+	tileNode->setTerrainEngineNode(_terrainEngineNode);
 
     // see if this tile might have children.
     bool prepareForChildren =

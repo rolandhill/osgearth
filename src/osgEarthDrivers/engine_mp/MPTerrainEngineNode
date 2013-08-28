@@ -56,10 +56,13 @@ namespace osgEarth_engine_mp
         /** Creates a tile node that is upsampled from an existing lower-LOD node. */
         osg::Node* createUpsampledNode(const TileKey& key, ProgressCallback* progress =0L);
 
+        void RegisterChangedTileNode(TileNode* tilenode) {};
+
     public: // TerrainEngineNode
 
         // for standalone tile creation outside of a terrain
         osg::Node* createTile(const TileKey& key);
+        virtual void traverse( osg::NodeVisitor& );
 
     public: // internal TerrainEngineNode
 
@@ -80,7 +83,7 @@ namespace osgEarth_engine_mp
 
         UID getUID() const;
 
-    public: // statics    
+    public: // statics
         static void registerEngine( MPTerrainEngineNode* engineNode );
         static void unregisterEngine( UID uid );
         static void getEngineByUID( UID uid, osg::ref_ptr<MPTerrainEngineNode>& output );
@@ -118,8 +121,8 @@ namespace osgEarth_engine_mp
 
         void moveImageLayer( unsigned int oldIndex, unsigned int newIndex );
         void moveElevationLayer( unsigned int oldIndex, unsigned int newIndex );
-        
-        void updateShaders(); 
+
+        void updateShaders();
 
     private:
         osgEarth::Drivers::MPTerrainEngineOptions _terrainOptions;

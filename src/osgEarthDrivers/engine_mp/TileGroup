@@ -60,6 +60,8 @@ namespace osgEarth_engine_mp
         /** The TileNode holding the geometry for this group. */
         TileNode* getTileNode() { return _tilenode; }
 
+		void resetUsedLastFrameFlags();
+
     public: // osg::Node
 
         /** custom traversal. */

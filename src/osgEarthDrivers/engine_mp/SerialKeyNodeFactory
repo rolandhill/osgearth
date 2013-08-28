@@ -77,6 +77,8 @@ namespace osgEarth_engine_mp
         const MPTerrainEngineOptions&       _options;
         osg::ref_ptr< TerrainNode >         _terrain;
         UID                                 _engineUID;
+
+        osg::ref_ptr<MPTerrainEngineNode>   _terrainEngineNode;
     };
 
 } // namespace osgEarth_engine_mp

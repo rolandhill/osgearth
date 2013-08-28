@@ -68,9 +68,9 @@ TilePagedLOD::addChild(osg::Node* node)
         return osg::PagedLOD::addChild( node );
     }
 
-    // If that fails, check whether this is a simple TileNode. This means that 
+    // If that fails, check whether this is a simple TileNode. This means that
     // this is a leaf node in the graph (no children), or it's a replacement
-    // tile for our existing tileNode, or possibly that it has no data at all 
+    // tile for our existing tileNode, or possibly that it has no data at all
     // (and we need to create an upsampled child to complete the required set of
     // four).
     TileNode* subtile = dynamic_cast<TileNode*>(node);
@@ -122,7 +122,7 @@ TilePagedLOD::addChild(osg::Node* node)
             }
         }
     }
-    
+
     // Getting here means the Tile dies somewhere in the pager while the pager was
     // trying to add it. From what I can tell, this is normal and just happens sometimes
     if ( !node )
@@ -145,14 +145,14 @@ TilePagedLOD::traverse(osg::NodeVisitor& nv)
         _children[0]->setNodeMask( _familyReady ? ~0 : 0 );
 
         // find our tile node:
-        TileNode* tilenode = dynamic_cast<TileGroup*>(_children[0].get()) ? 
+        TileNode* tilenode = dynamic_cast<TileGroup*>(_children[0].get()) ?
             static_cast<TileGroup*>(_children[0].get())->getTileNode() :
             static_cast<TileNode*>(_children[0].get());
 
-        // Check whether the TileNode is marked dirty. If so, install a new pager request 
+        // Check whether the TileNode is marked dirty. If so, install a new pager request
         // to reload and replace the TileNode.
         if (nv.getVisitorType() == nv.CULL_VISITOR &&
-            this->getNumFileNames() < 2 && 
+            this->getNumFileNames() < 2 &&
             tilenode->isOutOfDate() )
         {
             // lock keeps multiple CullVisitors from doing the same thing
@@ -202,8 +202,8 @@ namespace
 // The osgDB::DatabasePager will call this automatically to purge expired
 // tiles from the scene grpah.
 bool
-TilePagedLOD::removeExpiredChildren(double         expiryTime, 
-                                    unsigned       expiryFrame, 
+TilePagedLOD::removeExpiredChildren(double         expiryTime,
+                                    unsigned       expiryFrame,
                                     osg::NodeList& removedChildren)
 {
     if (_children.size()>_numChildrenThatCannotBeExpired)
@@ -233,4 +233,24 @@ TilePagedLOD::removeExpiredChildren(double         expiryTime,
         }
     }
     return false;
+}
+
+void TilePagedLOD::resetUsedLastFrameFlags()
+{
+	for( unsigned q=0; q<_children.size(); ++q )
+	{
+		TileNode* tn = dynamic_cast<TileNode*>( _children[q].get() );
+		if(tn)
+		{
+			tn->resetUsedLastFrameFlag();
+		}
+		else
+		{
+			TileGroup* tg = dynamic_cast<TileGroup*>( _children[q].get() );
+			if(tg)
+			{
+				tg->resetUsedLastFrameFlags();
+			}
+		}
+	}
 }

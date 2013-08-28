@@ -17,6 +17,7 @@
 * along with this program.  If not, see <http://www.gnu.org/licenses/>
 */
 #include "TileNode"
+#include "MPTerrainEngineNode"
 
 #include <osg/ClusterCullingCallback>
 #include <osg/NodeCallback>
@@ -49,7 +50,7 @@ _outOfDate         ( false )
     // NOTE:
     // We have temporarily disabled setting of the "birth time" uniform.
     // Having a uniform on each TileNode adds a StateGraph for each TileNode and slows
-    // down the DRAW time considerably. Until we find a better solution, no 
+    // down the DRAW time considerably. Until we find a better solution, no
     // birth time uniform here. (That only affects LOD Blending atm)
 
     //osg::StateSet* stateset = getOrCreateStateSet();
@@ -58,6 +59,8 @@ _outOfDate         ( false )
     _bornUniform = new osg::Uniform(osg::Uniform::FLOAT, "oe_tile_birthtime");
     _bornUniform->set( -1.0f );
     //stateset->addUniform( _bornUniform );
+
+    _usedLastFrame = false;
 }
 
 
@@ -86,7 +89,7 @@ TileNode::traverse( osg::NodeVisitor& nv )
             _outOfDate = true;
         }
 
-        // reset the "birth" time if necessary - this is the time at which the 
+        // reset the "birth" time if necessary - this is the time at which the
         // node passes cull (not multi-view compatible)
         const osg::FrameStamp* fs = nv.getFrameStamp();
         if ( fs )
@@ -101,6 +104,14 @@ TileNode::traverse( osg::NodeVisitor& nv )
 
             _lastTraversalFrame = frame;
         }
+
+        // If this tile is being traversed, then it is being used in display.
+        // We therefore notify the TerrainEngineNode if it is being turned on from off.
+        if(!_usedLastFrame)
+        {
+            _terrainEngineNode->RegisterChangedTileNode(this);
+        }
+        _usedLastFrame = true;
     }
 
     osg::MatrixTransform::traverse( nv );

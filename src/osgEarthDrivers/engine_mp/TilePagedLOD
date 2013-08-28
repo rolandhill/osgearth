@@ -56,6 +56,8 @@ namespace osgEarth_engine_mp
         /** Tell this LOD whether all its siblings are ready, and therefore it is OK to CULL */
         void setFamilyReady(bool value) { _familyReady = value; }
 
+        void resetUsedLastFrameFlags();
+
     public: // osg::Group
 
         /** called by the OSG DatabasePager when a paging result is ready. */

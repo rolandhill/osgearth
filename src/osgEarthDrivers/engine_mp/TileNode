@@ -37,6 +37,8 @@ namespace osgEarth_engine_mp
         virtual TileNode* getTileNode() = 0;
     };
 
+    class MPTerrainEngineNode;
+
     /**
      * Node that represents a single terrain tile that was compiled from
      * a TileModel (and corresponds to one TileKey). The matrixtransform
@@ -68,7 +70,7 @@ namespace osgEarth_engine_mp
 
         /**
          * Sets the last traversal frame manually. A parent TileGroup
-         * will call this to prevent the born-time from resetting 
+         * will call this to prevent the born-time from resetting
          * when traversing the tile's children.
          */
         void setLastTraversalFrame(unsigned frame);
@@ -95,6 +97,9 @@ namespace osgEarth_engine_mp
 
         TileNode* getTileNode() { return this; }
 
+		void setTerrainEngineNode(MPTerrainEngineNode* mpt) { _terrainEngineNode = mpt; }
+		void resetUsedLastFrameFlag() {  _usedLastFrame = false; }
+		bool getUsedLastFrame() { return _usedLastFrame; }
 
     public: // OVERRIDES
 
@@ -116,6 +121,9 @@ namespace osgEarth_engine_mp
         Revision                           _maprevision;
         bool                               _outOfDate;
         bool                               _dirty;
+
+		bool                               _usedLastFrame;
+        MPTerrainEngineNode*               _terrainEngineNode;
     };
 
 

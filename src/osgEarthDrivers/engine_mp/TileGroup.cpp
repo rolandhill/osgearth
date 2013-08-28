@@ -199,6 +199,8 @@ TileGroup::traverse(osg::NodeVisitor& nv)
 
         if ( considerSubtiles )
         {
+            _tilenode->resetUsedLastFrameFlag();
+
             for( unsigned q=0; q<4; ++q )
             {
                 TilePagedLOD* plod = static_cast<TilePagedLOD*>(_children[1+q].get());
@@ -215,6 +217,15 @@ TileGroup::traverse(osg::NodeVisitor& nv)
 
         if ( !considerSubtiles || !subtileFamilyReady || range > _subtileRange )
         {
+            if(!_tilenode->getUsedLastFrame())
+            {
+                for( unsigned q=0; q<4; ++q )
+                {
+                    TilePagedLOD* tpl = static_cast<TilePagedLOD*>( getChild(1+q) );
+                    tpl->resetUsedLastFrameFlags();
+                }
+            }
+
             _tilenode->accept( nv );
         }
     }
@@ -222,4 +233,16 @@ TileGroup::traverse(osg::NodeVisitor& nv)
     {
         osg::Group::traverse( nv );
     }
+}
+
+void TileGroup::resetUsedLastFrameFlags()
+{
+	_tilenode->resetUsedLastFrameFlag();
+
+	for( unsigned q=0; q<4; ++q )
+	{
+		TilePagedLOD* tpl = static_cast<TilePagedLOD*>( getChild(1+q) );
+		tpl->resetUsedLastFrameFlags();
+	}
+
 }
