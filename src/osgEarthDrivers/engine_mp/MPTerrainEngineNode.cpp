@@ -96,7 +96,7 @@ MPTerrainEngineNode::unregisterEngine( UID uid )
 }
 
 // since this method is called in a database pager thread, we use a ref_ptr output
-// parameter to avoid the engine node being destructed between the time we 
+// parameter to avoid the engine node being destructed between the time we
 // return it and the time it's accessed; this could happen if the user removed the
 // MapNode from the scene during paging.
 void
@@ -124,7 +124,7 @@ _terrain( terrain )
 
 void
 MPTerrainEngineNode::ElevationChangedCallback::onVisibleChanged( TerrainLayer* layer )
-{    
+{
     osgEarth::Registry::instance()->clearBlacklist();
     _terrain->refresh();
 }
@@ -190,7 +190,7 @@ MPTerrainEngineNode::postInitialize( const Map* map, const TerrainOptions& optio
     {
         _deadTiles = new TileNodeRegistry("dead");
     }
-    
+
     // initialize the model factory:
     _tileModelFactory = new TileModelFactory(getMap(), _liveTiles.get(), _terrainOptions );
 
@@ -350,7 +350,7 @@ MPTerrainEngineNode::getKeyNodeFactory()
     if ( !knf.valid() )
     {
         // create a compiler for compiling tile models into geometry
-        bool optimizeTriangleOrientation = 
+        bool optimizeTriangleOrientation =
             getMap()->getMapOptions().elevationInterpolation() != INTERP_TRIANGULATE;
 
         // A compiler specific to this thread:
@@ -361,14 +361,14 @@ MPTerrainEngineNode::getKeyNodeFactory()
             _terrainOptions );
 
         // initialize a key node factory.
-        knf = new SerialKeyNodeFactory( 
+        knf = new SerialKeyNodeFactory(
             _tileModelFactory.get(),
             compiler,
             _liveTiles.get(),
             _deadTiles.get(),
-            _terrainOptions, 
+            _terrainOptions,
             MapInfo( getMap() ),
-            _terrain, 
+            _terrain,
             _uid );
     }
 
@@ -486,7 +486,7 @@ MPTerrainEngineNode::onMapModelChanged( const MapModelChange& change )
             case MapModelChange::ADD_MODEL_LAYER:
             case MapModelChange::REMOVE_MODEL_LAYER:
             case MapModelChange::MOVE_MODEL_LAYER:
-            default: 
+            default:
                 break;
             }
         }
@@ -577,7 +577,7 @@ void
 MPTerrainEngineNode::validateTerrainOptions( TerrainOptions& options )
 {
     TerrainEngineNode::validateTerrainOptions( options );
-    
+
     //nop for now.
     //note: to validate plugin-specific features, we would create an MPTerrainEngineOptions
     // and do the validation on that. You would then re-integrate it by calling
@@ -762,14 +762,14 @@ MPTerrainEngineNode::updateShaders()
         if ( _terrainOptions.premultipliedAlpha() == true )
         {
             // activate PMA blending.
-            terrainStateSet->setAttributeAndModes( 
+            terrainStateSet->setAttributeAndModes(
                 new osg::BlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA),
                 osg::StateAttribute::ON );
         }
         else
         {
             // activate standard mix blending.
-            terrainStateSet->setAttributeAndModes( 
+            terrainStateSet->setAttributeAndModes(
                 new osg::BlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA),
                 osg::StateAttribute::ON );
         }
@@ -779,7 +779,7 @@ MPTerrainEngineNode::updateShaders()
             new osg::Depth(osg::Depth::LEQUAL, 0, 1, true) );
 
         // binding for the terrain texture
-        terrainStateSet->getOrCreateUniform( 
+        terrainStateSet->getOrCreateUniform(
             "oe_layer_tex", osg::Uniform::SAMPLER_2D )->set( _primaryUnit );
 
         // binding for the secondary texture (for LOD blending)
@@ -803,4 +803,12 @@ MPTerrainEngineNode::updateShaders()
 
         _shaderUpdateRequired = false;
     }
+}
+
+void
+MPTerrainEngineNode::traverse( osg::NodeVisitor& nv )
+{
+    TerrainEngineNode::traverse( nv );
+
+	//Put tile joining code here
 }

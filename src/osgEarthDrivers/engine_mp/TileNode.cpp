@@ -17,6 +17,7 @@
 * along with this program.  If not, see <http://www.gnu.org/licenses/>
 */
 #include "TileNode"
+#include "MPTerrainEngineNode"
 
 #include <osg/ClusterCullingCallback>
 #include <osg/NodeCallback>
@@ -52,6 +53,8 @@ _lastTraversalFrame( 0 )
     _bornUniform = new osg::Uniform(osg::Uniform::FLOAT, "oe_tile_birthtime");
     _bornUniform->set( -1.0f );
     stateset->addUniform( _bornUniform );
+
+    _usedLastFrame = false;
 }
 
 
@@ -66,7 +69,7 @@ osg::BoundingSphere
 TileNode::computeBound() const
 {
     osg::BoundingSphere bs = osg::MatrixTransform::computeBound();
-    
+
     unsigned tw, th;
     _key.getProfile()->getNumTiles(_key.getLOD(), tw, th);
 
@@ -93,7 +96,7 @@ TileNode::traverse( osg::NodeVisitor& nv )
             if (ccc->cull(&nv,0,static_cast<osg::State *>(0))) return;
         }
 
-        // reset the "birth" time if necessary - this is the time at which the 
+        // reset the "birth" time if necessary - this is the time at which the
         // node passes cull
         const osg::FrameStamp* fs = nv.getFrameStamp();
         if ( fs )
@@ -108,6 +111,14 @@ TileNode::traverse( osg::NodeVisitor& nv )
 
             _lastTraversalFrame = frame;
         }
+
+        // If this tile is being traversed, then it is being used in display.
+        // We therefore notify the TerrainEngineNode if it is being turned on from off.
+        if(!_usedLastFrame)
+        {
+            _terrainEngineNode->RegisterChangedTileNode(this);
+        }
+        _usedLastFrame = true;
     }
 
     osg::MatrixTransform::traverse( nv );

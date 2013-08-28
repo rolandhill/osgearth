@@ -72,7 +72,7 @@ TileGroup::traverse(osg::NodeVisitor& nv)
             range = nv.getDistanceToViewPoint( getBound().center(), true );
         }
 
-        // if all four subtiles have reported that they are upsampling, 
+        // if all four subtiles have reported that they are upsampling,
         // don't use any of them.
         if ( _traverseSubtiles && _numSubtilesUpsampling == 4 )
         {
@@ -83,12 +83,23 @@ TileGroup::traverse(osg::NodeVisitor& nv)
         // not all loaded yet, or we are skipping subtiles, draw the current tile.
         if ( range > _subtileRange || _numSubtilesLoaded < 4 || !_traverseSubtiles )
         {
+            if(!_tilenode->getUsedLastFrame())
+            {
+                for( unsigned q=0; q<4; ++q )
+                {
+                    TilePagedLOD* tpl = static_cast<TilePagedLOD*>( getChild(1+q) );
+                    tpl->resetUsedLastFrameFlags();
+                }
+            }
+
             _tilenode->accept( nv );
         }
 
         // if we're in range, traverse the subtiles.
         if ( _traverseSubtiles && range <= _subtileRange )
         {
+            _tilenode->resetUsedLastFrameFlag();
+
             for( unsigned q=0; q<4; ++q )
             {
                 getChild(1+q)->accept( nv );
@@ -105,4 +116,16 @@ TileGroup::traverse(osg::NodeVisitor& nv)
     {
         osg::Group::traverse( nv );
     }
+}
+
+void TileGroup::resetUsedLastFrameFlags()
+{
+	_tilenode->resetUsedLastFrameFlag();
+
+	for( unsigned q=0; q<4; ++q )
+	{
+		TilePagedLOD* tpl = static_cast<TilePagedLOD*>( getChild(1+q) );
+		tpl->resetUsedLastFrameFlags();
+	}
+
 }

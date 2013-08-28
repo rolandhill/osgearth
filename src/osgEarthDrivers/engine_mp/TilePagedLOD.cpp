@@ -65,7 +65,7 @@ TilePagedLOD::addChild(osg::Node* node)
         return osg::PagedLOD::addChild( node );
     }
 
-    // If that fails, check whether this is a simple TileNode. This means that 
+    // If that fails, check whether this is a simple TileNode. This means that
     // this is a leaf node in the graph (no children), and possibly that it has
     // no data at all (and we need to create an upsampled child to complete the
     // required set of four).
@@ -102,7 +102,7 @@ TilePagedLOD::addChild(osg::Node* node)
             return false;
         }
     }
-    
+
     // Getting here means there's an internal error -- the addChild data was
     // of an unexpected node type. This should never happen.
     OE_WARN << LC << "TilePagedLOD fail." << std::endl;
@@ -132,8 +132,8 @@ TilePagedLOD::traverse(osg::NodeVisitor& nv)
 // The osgDB::DatabasePager will call this automatically to purge expired
 // tiles from the scene grpah.
 bool
-TilePagedLOD::removeExpiredChildren(double         expiryTime, 
-                                    unsigned       expiryFrame, 
+TilePagedLOD::removeExpiredChildren(double         expiryTime,
+                                    unsigned       expiryFrame,
                                     osg::NodeList& removedChildren)
 {
     if (_children.size()>_numChildrenThatCannotBeExpired)
@@ -174,4 +174,24 @@ TilePagedLOD::removeExpiredChildren(double         expiryTime,
         }
     }
     return false;
+}
+
+void TilePagedLOD::resetUsedLastFrameFlags()
+{
+	for( unsigned q=0; q<_children.size(); ++q )
+	{
+		TileNode* tn = dynamic_cast<TileNode*>( _children[q].get() );
+		if(tn)
+		{
+			tn->resetUsedLastFrameFlag();
+		}
+		else
+		{
+			TileGroup* tg = dynamic_cast<TileGroup*>( _children[q].get() );
+			if(tg)
+			{
+				tg->resetUsedLastFrameFlags();
+			}
+		}
+	}
 }

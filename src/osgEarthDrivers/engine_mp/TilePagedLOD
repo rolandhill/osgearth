@@ -40,6 +40,8 @@ namespace osgEarth_engine_mp
             TileNodeRegistry* liveTiles,
             TileNodeRegistry* deadTiles);
 
+            void resetUsedLastFrameFlags();
+
     public: // osg::Group
 
         /** called by the OSG DatabasePager when a paging result is ready. */
