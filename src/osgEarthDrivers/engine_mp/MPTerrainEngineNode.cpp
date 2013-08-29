@@ -808,7 +808,104 @@ MPTerrainEngineNode::updateShaders()
 void
 MPTerrainEngineNode::traverse( osg::NodeVisitor& nv )
 {
+    _changedTiles.clear();
+
     TerrainEngineNode::traverse( nv );
 
 	//Put tile joining code here
+    if ( nv.getVisitorType() == nv.CULL_VISITOR )
+    {
+        BuildTileUpdateVec();
+    }
 }
+
+void
+MPTerrainEngineNode::RegisterChangedTileNode(TileNode* tilenode, Side side)
+{
+    _changedTiles.push_back(ChangedTile(tilenode, side));
+}
+
+void
+MPTerrainEngineNode::BuildTileUpdateVec()
+{
+    // Avoid calculating these parameters every call
+    unsigned int numTilesX0;
+    unsigned int numTilesY0;
+    _update_mapf->getProfile()->getNumTiles(0, numTilesX0, numTilesY0);
+
+    // Iterate through changed tiles
+    std::vector< ChangedTile >::iterator it;
+
+    for(it = _changedTiles.begin(); it < _changedTiles.end(); it++)
+    {
+        // Get location information
+        TileKey& key = (*it)._tilenode->getTileModel()->_tileKey;
+        unsigned int lod = key.getLOD();
+        unsigned int x = key.getTileX();
+        unsigned int y = key.getTileY();
+
+        unsigned int numTilesX;
+        unsigned int numTilesY;
+        _update_mapf->getProfile()->getNumTiles(lod, numTilesX0, numTilesY0);
+
+        if(x == 0) (*it)._side &= (~Side_W);
+        if(y == 0) (*it)._side &= (~Side_N);
+        if(x == numTilesX - 1) (*it)._side &= (~Side_E);
+        if(y == numTilesY - 1) (*it)._side &= (~Side_S);
+
+        unsigned int tilesPerLod0Tile = numTilesX / numTilesX0;
+
+        // Find the TileNode(s) bounding this node on each side and set bounding TileNode* on tile of higher LOD.
+        if((*it)._side || Side_W) MarkBoundingTiles((*it)._tilenode, Side_W, tilesPerLod0Tile, numTilesX0, numTilesY0);
+        if((*it)._side || Side_N) MarkBoundingTiles((*it)._tilenode, Side_N, tilesPerLod0Tile, numTilesX0, numTilesY0);
+        if((*it)._side || Side_E) MarkBoundingTiles((*it)._tilenode, Side_E, tilesPerLod0Tile, numTilesX0, numTilesY0);
+        if((*it)._side || Side_S) MarkBoundingTiles((*it)._tilenode, Side_S, tilesPerLod0Tile, numTilesX0, numTilesY0);
+    }
+}
+
+void
+MPTerrainEngineNode::MarkBoundingTiles(TileNode* tilenode, Side side, unsigned int tilesPerLod0Tile, unsigned int numTilesX0, unsigned int numTilesY0)
+{
+    // Get location information
+    TileKey& key = tilenode->getTileModel()->_tileKey;
+    unsigned int lod = key.getLOD();
+    unsigned int x = key.getTileX();
+    unsigned int y = key.getTileY();
+
+    // Calcualte target neighbour
+    // We don't need to worry about going outside the tile limits as this was handled in BuildTileUpdateVec
+    unsigned int tx = x;
+    unsigned int ty = y;
+    if(side == Side_W) x -= 1;
+    else if(side == Side_N) y -= 1;
+    else if(side == Side_E) x += 1;
+    else if(side == Side_S) y += 1;
+
+    // Figure out which of the LOD0 tiles contains the target
+    unsigned int lod0TileX = tx / tilesPerLod0Tile;
+    unsigned int lod0TileY = ty / tilesPerLod0Tile;
+
+    // Calcualte the offset relative to the LOD0 tile
+    tx = tx - (lod0TileX * tilesPerLod0Tile);
+    ty = ty - (lod0TileY * tilesPerLod0Tile);
+
+    //Set up a vector to hold bounding tilenodes
+    std::vector< TileNode* > tnv;
+
+    // Find target LOD0 node
+    unsigned int index = numTilesY0 * lodOTileX + lod0TileY;
+    osg::Node* node = _terrain->getChild(index);
+
+    // Node will usually be a TileGroup
+    TileGroup* tg = dynamic_cast<TileGroup*>(node);
+    if(tg)
+    {
+    }
+    else
+    {
+        // Special case where LOD0 tile is also a leaf (ie. no subtiles)
+        TileNode* tn = dynamic_cast<TileNode*>(node);
+        if(tn)
+        {
+        }
+    }

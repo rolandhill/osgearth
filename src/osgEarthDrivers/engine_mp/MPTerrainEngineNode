@@ -51,7 +51,25 @@ namespace osgEarth_engine_mp
 
         osg::Node* createUpsampledNode(const TileKey& key, ProgressCallback* progress =0L);
 
-        void RegisterChangedTileNode(TileNode* tilenode) {};
+        enum Side
+        {
+            Side_W = 0x1,
+            Side_N = 0x1 << 1,
+            Side_E = 0x1 << 2,
+            Side_S = 0x1 << 3,
+            Side_All = 0x1111
+        } ;
+
+        struct ChangedTile
+        {
+            ChangedTile(TileNode* tn, Side is) : _tilenode(tn), _side(is) {};
+            TileNode* _tilenode;
+            Side _side;
+        };
+
+        void RegisterChangedTileNode(TileNode* tilenode, Side side);
+        void BuildTileUpdateVec();
+        void MarkBoundingTiles(TileNode* tilenode, Side side, unsigned int tilesPerLod0Tile, unsigned int numTilesX0, unsigned int numTilesY0);
 
     public: // TerrainEngineNode
 
@@ -145,6 +163,10 @@ namespace osgEarth_engine_mp
         osg::Uniform* _verticalScaleUniform;
 
         osg::ref_ptr< TileModelFactory > _tileModelFactory;
+
+        std::vector< ChangedTile > _changedTiles;
+
+        std::vector< TileNode* > _tilesToUpdate;
 
         MPTerrainEngineNode( const MPTerrainEngineNode& rhs, const osg::CopyOp& op =osg::CopyOp::DEEP_COPY_ALL ) { }
     };
