@@ -116,7 +116,7 @@ TileNode::traverse( osg::NodeVisitor& nv )
         // We therefore notify the TerrainEngineNode if it is being turned on from off.
         if(!_usedLastFrame)
         {
-            _terrainEngineNode->RegisterChangedTileNode(this, MPTerrainEngineNode::Invalid_All);
+            _terrainEngineNode->RegisterChangedTileNode(this, MPTerrainEngineNode::Side_All);
         }
         _usedLastFrame = true;
     }

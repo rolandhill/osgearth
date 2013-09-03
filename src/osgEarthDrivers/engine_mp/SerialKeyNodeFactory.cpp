@@ -97,7 +97,6 @@ _mapInfo         ( mapInfo ),
 _terrain         ( terrain ),
 _engineUID       ( engineUID )
 {
-    MPTerrainEngineNode::getEngineByUID(_engineUID, _terrainEngineNode);
 }
 
 

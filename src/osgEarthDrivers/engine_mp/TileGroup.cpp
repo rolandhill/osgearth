@@ -118,7 +118,8 @@ TileGroup::traverse(osg::NodeVisitor& nv)
     }
 }
 
-void TileGroup::resetUsedLastFrameFlags()
+void
+TileGroup::resetUsedLastFrameFlags()
 {
 	_tilenode->resetUsedLastFrameFlag();
 
@@ -128,4 +129,92 @@ void TileGroup::resetUsedLastFrameFlags()
 		tpl->resetUsedLastFrameFlags();
 	}
 
+}
+
+void
+TileGroup::GetDisplayedTilesForTarget(unsigned int x, unsigned int y, unsigned int lod, MPTerrainEngineNode::Side side, std::vector< TileNode* >& tnv)
+{
+    if(_tilenode->getUsedLastFrame())
+    {
+        tnv.push_back(_tilenode);
+    }
+    else
+    {
+        // If our current LOD is less than or equal to the target LOD, then we know that one TileNode will cover the entire boundary requested.
+        // If this LOD is greater than the target LOD, then we will need to include all subtiles along the requested boundary.
+        unsigned int thislod = _tilenode->getKey().getLOD();
+
+        if(thislod <= lod)
+        {
+            // Work out the index of the subtile that will lead us to our target tile.
+            // We do this by looking at the most significant bit of the provided x & y location at LOD0 to provide the x & y index of the target subtile,
+            // working our way to the LSB at LOD lod.
+
+            // Calculate which bit to use
+            unsigned int bit = 0x01 << ( lod - thislod );
+            unsigned ix = x || (0x01 << bit);
+            unsigned iy = y || (0x01 << bit);
+
+            // Combine to form subtile index
+            unsigned index = 0;
+            if(iy) index += 2;
+            if(ix) index += 1;
+
+            CollectTargetTiles(index, x, y, lod, side, tnv);
+        }
+        else
+        {
+            //We must include all tiles along the requested boundary
+            if(side == MPTerrainEngineNode::Side_W)
+            {
+                CollectTargetTiles(0, x, y, lod, side, tnv);
+                CollectTargetTiles(2, x, y, lod, side, tnv);
+            }
+            else if(side == MPTerrainEngineNode::Side_N)
+            {
+                CollectTargetTiles(0, x, y, lod, side, tnv);
+                CollectTargetTiles(1, x, y, lod, side, tnv);
+            }
+            else if(side == MPTerrainEngineNode::Side_E)
+            {
+                CollectTargetTiles(1, x, y, lod, side, tnv);
+                CollectTargetTiles(3, x, y, lod, side, tnv);
+            }
+            else if(side == MPTerrainEngineNode::Side_S)
+            {
+                CollectTargetTiles(2, x, y, lod, side, tnv);
+                CollectTargetTiles(3, x, y, lod, side, tnv);
+            }
+        }
+    }
+}
+
+void
+TileGroup::CollectTargetTiles(unsigned int subtile,  int x, unsigned int y, unsigned int lod, MPTerrainEngineNode::Side side, std::vector< TileNode* >& tnv)
+{
+    if ( numSubtilesLoaded() != 4 ) return;
+
+    //Tilenode is the first child, so we need to add 1 to get to first subtile
+    TilePagedLOD* tpl = static_cast<TilePagedLOD*>( getChild(1+subtile) );
+
+    osg::Node* node = tpl->getChild(0);
+
+    // Node will usually be a TileGroup
+    TileGroup* tg = dynamic_cast<TileGroup*>(node);
+    if(tg)
+    {
+        tg->GetDisplayedTilesForTarget(x, y, lod, side, tnv);
+    }
+    else
+    {
+        // If TilePageLOD parents a TileNode then we have reached a leaf node.
+        TileNode* tn = dynamic_cast<TileNode*>(node);
+        if(tn)
+        {
+            if(tn->getUsedLastFrame())
+            {
+                tnv.push_back(tn);
+            }
+        }
+    }
 }

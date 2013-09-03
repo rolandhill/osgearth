@@ -21,6 +21,7 @@
 
 #include "Common"
 #include "TileNode"
+#include "MPTerrainEngineNode"
 #include <osg/Group>
 #include <osgDB/Options>
 
@@ -40,7 +41,7 @@ namespace osgEarth_engine_mp
     public:
         TileGroup(
             TileNode*         tilenode,
-            const UID&        engineUID, 
+            const UID&        engineUID,
             TileNodeRegistry* liveTiles,
             TileNodeRegistry* deadTiles,
             osgDB::Options*   dbOptions);
@@ -65,16 +66,20 @@ namespace osgEarth_engine_mp
 
 		void resetUsedLastFrameFlags();
 
+        void GetDisplayedTilesForTarget(unsigned int x, unsigned int y, unsigned int lod, MPTerrainEngineNode::Side side, std::vector< TileNode* >& tnv);
+
     public: // osg::Node
 
         /** custom traversal. */
         void traverse(osg::NodeVisitor& nv);
-        
+
         /** Bound is equivalent to the bound of the tilenode. */
         osg::BoundingSphere computeBound() const { return _tilenode->computeBound(); }
 
     protected:
         virtual ~TileGroup() { }
+
+        void CollectTargetTiles(unsigned int subtile,  int x, unsigned int y, unsigned int lod, MPTerrainEngineNode::Side side, std::vector< TileNode* >& tnv);
 
     private:
         TileKey   _key;

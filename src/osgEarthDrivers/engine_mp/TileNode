@@ -69,6 +69,11 @@ namespace osgEarth_engine_mp
 		void resetUsedLastFrameFlag() {  _usedLastFrame = false; }
 		bool getUsedLastFrame() { return _usedLastFrame; }
 
+		void setBoundTileW(TileNode* tilenode) { _boundTileW = tilenode; }
+		void setBoundTileN(TileNode* tilenode) { _boundTileN = tilenode; }
+		void setBoundTileE(TileNode* tilenode) { _boundTileE = tilenode; }
+		void setBoundTileS(TileNode* tilenode) { _boundTileS = tilenode; }
+
     public: // OVERRIDES
 
         virtual void traverse( class osg::NodeVisitor& nv );
@@ -91,6 +96,11 @@ namespace osgEarth_engine_mp
 
 		bool                               _usedLastFrame;
         MPTerrainEngineNode*               _terrainEngineNode;
+
+        osg::ref_ptr<TileNode>             _boundTileW;
+        osg::ref_ptr<TileNode>             _boundTileN;
+        osg::ref_ptr<TileNode>             _boundTileE;
+        osg::ref_ptr<TileNode>             _boundTileS;
     };
 
 
