@@ -67,14 +67,15 @@ namespace osgEarth_engine_mp
 
         struct ChangedTile
         {
-            ChangedTile(TileNode* tn, Side is) : _tilenode(tn), _side(is) {};
-            TileNode* _tilenode;
+            ChangedTile(TileNode* tn, Side is) { _tilenode = tn; _side = is; }
+            osg::ref_ptr<TileNode> _tilenode;
             Side _side;
         };
 
         void RegisterChangedTileNode(TileNode* tilenode, Side side);
         void BuildTileUpdateVec();
         void MarkBoundingTiles(TileNode* tilenode, Side side, unsigned int tilesPerLod0Tile, unsigned int numTilesX0, unsigned int numTilesY0);
+        void QueueTileForUpdate(TileNode* tilenode, Side side, TileNode* target);
 
     public: // TerrainEngineNode
 
@@ -179,7 +180,7 @@ namespace osgEarth_engine_mp
 
         std::vector< ChangedTile > _changedTiles;
 
-        std::vector< TileNode* > _tilesToUpdate;
+        std::vector< osg::ref_ptr<TileNode> > _tilesToUpdate;
 
         MPTerrainEngineNode( const MPTerrainEngineNode& rhs, const osg::CopyOp& op =osg::CopyOp::DEEP_COPY_ALL ) { }
     };
