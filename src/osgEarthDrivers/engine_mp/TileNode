@@ -66,13 +66,15 @@ namespace osgEarth_engine_mp
         void setLastTraversalFrame(unsigned frame);
 
 		void setTerrainEngineNode(MPTerrainEngineNode* mpt) { _terrainEngineNode = mpt; }
-		void resetUsedLastFrameFlag() {  _usedLastFrame = false; }
+		void resetUsedLastFrameFlag();
 		bool getUsedLastFrame() { return _usedLastFrame; }
 
-		void setBoundTileW(TileNode* tilenode) { _boundTileW = tilenode; }
-		void setBoundTileN(TileNode* tilenode) { _boundTileN = tilenode; }
-		void setBoundTileE(TileNode* tilenode) { _boundTileE = tilenode; }
-		void setBoundTileS(TileNode* tilenode) { _boundTileS = tilenode; }
+		void setBoundTileW(TileNode* tilenode) { _boundTileW_pending = tilenode; }
+		void setBoundTileN(TileNode* tilenode) { _boundTileN_pending = tilenode; }
+		void setBoundTileE(TileNode* tilenode) { _boundTileE_pending = tilenode; }
+		void setBoundTileS(TileNode* tilenode) { _boundTileS_pending = tilenode; }
+
+		void AdjustEdges();
 
     public: // OVERRIDES
 
@@ -85,6 +87,18 @@ namespace osgEarth_engine_mp
     protected:
 
         virtual ~TileNode() { }
+
+        osg::Vec3Array* getVertexArray();
+
+        void AdjustEdgeW(osg::Vec3d center);
+        void AdjustEdgeN(osg::Vec3d center);
+        void AdjustEdgeE(osg::Vec3d center);
+        void AdjustEdgeS(osg::Vec3d center);
+
+        void ResetEdgeW();
+        void ResetEdgeN();
+        void ResetEdgeE();
+        void ResetEdgeS();
 
         TileKey                            _key;
         osg::ref_ptr<osg::Uniform>         _bornUniform;
@@ -101,6 +115,11 @@ namespace osgEarth_engine_mp
         osg::ref_ptr<TileNode>             _boundTileN;
         osg::ref_ptr<TileNode>             _boundTileE;
         osg::ref_ptr<TileNode>             _boundTileS;
+
+        osg::ref_ptr<TileNode>             _boundTileW_pending;
+        osg::ref_ptr<TileNode>             _boundTileN_pending;
+        osg::ref_ptr<TileNode>             _boundTileE_pending;
+        osg::ref_ptr<TileNode>             _boundTileS_pending;
     };
 
 
