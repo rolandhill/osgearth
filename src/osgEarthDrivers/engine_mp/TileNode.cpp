@@ -18,6 +18,7 @@
 */
 #include "TileNode"
 #include "MPTerrainEngineNode"
+#include "MPGeometry"
 
 #include <osg/ClusterCullingCallback>
 #include <osg/NodeCallback>
@@ -76,6 +77,31 @@ TileNode::traverse( osg::NodeVisitor& nv )
 {
     if ( nv.getVisitorType() == nv.CULL_VISITOR )
     {
+        //Check if the boundry tiles are still active. If not, then remove any adjustments
+        if(_boundTileW.valid() && !_boundTileW->getUsedLastFrame())
+        {
+            _boundTileW = 0L;
+            ResetEdgeW();
+        }
+
+        if(_boundTileN.valid() && !_boundTileN->getUsedLastFrame())
+        {
+            _boundTileN = 0L;
+            ResetEdgeN();
+        }
+
+        if(_boundTileE.valid() && !_boundTileE->getUsedLastFrame())
+        {
+            _boundTileE = 0L;
+            ResetEdgeE();
+        }
+
+        if(_boundTileS.valid() && !_boundTileS->getUsedLastFrame())
+        {
+            _boundTileS = 0L;
+            ResetEdgeS();
+        }
+
         osg::ClusterCullingCallback* ccc = dynamic_cast<osg::ClusterCullingCallback*>(getCullCallback());
         if (ccc)
         {
@@ -134,3 +160,513 @@ TileNode::resizeGLObjectBuffers(unsigned maxSize)
     if ( _model.valid() )
         const_cast<TileModel*>(_model.get())->resizeGLObjectBuffers( maxSize );
 }
+
+void
+TileNode::resetUsedLastFrameFlag()
+{
+    _usedLastFrame = false;
+
+    //Clear all boudary node data
+    _boundTileW = 0L;
+    _boundTileN = 0L;
+    _boundTileE = 0L;
+    _boundTileS = 0L;
+}
+
+osg::Vec3Array*
+TileNode::getVertexArray()
+{
+    osg::Vec3Array* va = 0L;
+
+    if(getNumChildren() > 0)
+    {
+        osg::Geode* geode = dynamic_cast<osg::Geode*>(getChild(0));
+        if(geode)
+        {
+            if(geode->getNumDrawables() > 0)
+            {
+                MPGeometry* mpg = dynamic_cast<MPGeometry*>(geode->getDrawable(0));
+                if(mpg)
+                {
+                    va = dynamic_cast<osg::Vec3Array*>(mpg->getVertexArray());
+                }
+            }
+        }
+    }
+
+    return va;
+}
+
+void
+TileNode::AdjustEdges()
+{
+    osg::Vec3d center = getMatrix().getTrans();
+
+    // Check each boundary to see if an adjustment is required
+    if(_boundTileW_pending.valid()) AdjustEdgeW(center);
+    if(_boundTileN_pending.valid()) AdjustEdgeN(center);
+    if(_boundTileE_pending.valid()) AdjustEdgeE(center);
+    if(_boundTileS_pending.valid()) AdjustEdgeS(center);
+}
+
+void
+TileNode::AdjustEdgeW(osg::Vec3d center)
+{
+//    const TileKey& key = getTileModel()->_tileKey;
+//    unsigned int lod = key.getLOD();
+//    unsigned int x = key.getTileX();
+//    unsigned int y = key.getTileY();
+//
+//    std::cout << "\n Adjusting West Side of " << this << "(" << x << ", " << y << ", " << lod << ")" << "\n";
+//
+//    const TileKey& key2 = _boundTileW_pending->getTileModel()->_tileKey;
+//    unsigned int lod2 = key2.getLOD();
+//    unsigned int x2 = key2.getTileX();
+//    unsigned int y2 = key2.getTileY();
+//    std::cout << "\n                  using " << _boundTileW << "(" << x2 << ", " << y2 << ", " << lod2 << ")" << "\n";
+//
+    // Get the vertex array to adjust
+    osg::Vec3Array* va = getVertexArray();
+
+    // Get heightfield of this tile
+    osg::HeightField* hf  = _model->_elevationData.getHeightField();
+    int rows = hf->getNumRows();
+    int cols = hf->getNumColumns();
+    osg::Vec3 origin = hf->getOrigin();
+    float xint = hf->getXInterval();
+    float yint = hf->getYInterval();
+
+//    if(_model->_sampleRatio != 1.0f) std::cout << "Sample Ratio is: " << _model->_sampleRatio;
+
+    // Get heightfield of bounding tile
+    osg::HeightField* bhf  = _boundTileW_pending->getTileModel()->_elevationData.getHeightField();
+    int brows = bhf->getNumRows();
+    int bcols = bhf->getNumColumns();
+    osg::Vec3 borigin = bhf->getOrigin();
+    float bxint = bhf->getXInterval();
+    float byint = bhf->getYInterval();
+
+//    if(_boundTileW_pending->getTileModel()->_sampleRatio != 1.0f) std::cout << "Sample Ratio is: " << _boundTileW_pending->getTileModel()->_sampleRatio;
+
+//    if(lod2 < lod)
+//    {
+//        x = 1;
+//    }
+    // Figure out the start coordinate in cells of the start of this tile, within the boundary tile
+    float start = (origin.y() - borigin.y()) / byint;
+
+    // Calculate the step amount (in cells) in the boundary tile for each 1 cell step in this tile
+    float step = yint / byint;
+
+    float cell = start;
+
+    // Loop through this tiles boundary heights
+    for(int j = 0; j < rows; j++)
+    {
+        // Get the lower coordinate
+        int cell0 = (int)cell;
+
+        float z =0.0f;
+
+        if(cell0 == cell || cell0 == brows)
+        {
+            z = bhf->getHeight(bcols - 1, cell0);
+        }
+        else
+        {
+            // get the boundary height at each coordinate then interpolate
+            float z0 = bhf->getHeight(bcols - 1, cell0);
+            float z1 = bhf->getHeight(bcols - 1, cell0 + 1);
+
+            if(z0 == NO_DATA_VALUE || z1 == NO_DATA_VALUE)
+            {
+                z = NO_DATA_VALUE;
+            }
+            else
+            {
+                z = z0 + (z1 - z0) * (cell - (float)cell0);
+            }
+        }
+
+        if(z != NO_DATA_VALUE)
+        {
+            osg::Vec3d ndc( 0.0, ((double)j)/(double)(rows-1), z);
+
+            osg::Vec3d model;
+            _model->_tileLocator->unitToModel( ndc, model );
+            osg::Vec3d v = model - center;
+
+            (*va)[j * cols] = v;
+        }
+
+        cell += step;
+    }
+
+    va->dirty();
+
+    _boundTileW = _boundTileW_pending;
+    _boundTileW_pending = 0L;
+}
+
+void
+TileNode::AdjustEdgeN(osg::Vec3d center)
+{
+    // Get the vertex array to adjust
+    osg::Vec3Array* va = getVertexArray();
+
+    // Get heightfield of this tile
+    osg::HeightField* hf  = _model->_elevationData.getHeightField();
+    int rows = hf->getNumRows();
+    int cols = hf->getNumColumns();
+    osg::Vec3 origin = hf->getOrigin();
+    float xint = hf->getXInterval();
+    float yint = hf->getYInterval();
+
+    // Get heightfield of bounding tile
+    osg::HeightField* bhf  = _boundTileN_pending->getTileModel()->_elevationData.getHeightField();
+    int brows = bhf->getNumRows();
+    int bcols = bhf->getNumColumns();
+    osg::Vec3 borigin = bhf->getOrigin();
+    float bxint = bhf->getXInterval();
+    float byint = bhf->getYInterval();
+
+    // Figure out the start coordinate in cells of the start of this tile, within the boundary tile
+    float start = (origin.x() - borigin.x()) / bxint;
+
+    // Calculate the step amount (in cells) in the boundary tile for each 1 cell step in this tile
+    float step = xint / bxint;
+
+    float cell = start;
+
+    // Loop through this tiles boundary heights
+    for(int i = 0; i < cols; i++)
+    {
+        // Get the lower coordinate
+        int cell0 = (int)cell;
+
+        float z =0.0f;
+
+        if(cell0 == cell || cell0 == bcols)
+        {
+            z = bhf->getHeight(cell0, 0);
+        }
+        else
+        {
+            // get the boundary height at each coordinate then interpolate
+            float z0 = bhf->getHeight(cell0, 0);
+            float z1 = bhf->getHeight(cell0 + 1, 0);
+
+            if(z0 == NO_DATA_VALUE || z1 == NO_DATA_VALUE)
+            {
+                z = NO_DATA_VALUE;
+            }
+            else
+            {
+                z = z0 + (z1 - z0) * (cell - cell0);
+            }
+        }
+
+        if(z != NO_DATA_VALUE)
+        {
+            osg::Vec3d ndc( ((double)i)/(double)(cols-1), 1.0, z);
+
+            osg::Vec3d model;
+            _model->_tileLocator->unitToModel( ndc, model );
+            osg::Vec3d v = model - center;
+
+            (*va)[(rows - 1) * cols + i] = v;
+        }
+
+        cell += step;
+    }
+
+    va->dirty();
+
+    _boundTileN = _boundTileN_pending;
+    _boundTileN_pending = 0L;
+}
+
+void
+TileNode::AdjustEdgeE(osg::Vec3d center)
+{
+    // Get the vertex array to adjust
+    osg::Vec3Array* va = getVertexArray();
+
+    // Get heightfield of this tile
+    osg::HeightField* hf  = _model->_elevationData.getHeightField();
+    int rows = hf->getNumRows();
+    int cols = hf->getNumColumns();
+    osg::Vec3 origin = hf->getOrigin();
+    float xint = hf->getXInterval();
+    float yint = hf->getYInterval();
+
+    // Get heightfield of bounding tile
+    osg::HeightField* bhf  = _boundTileE_pending->getTileModel()->_elevationData.getHeightField();
+    int brows = bhf->getNumRows();
+    int bcols = bhf->getNumColumns();
+    osg::Vec3 borigin = bhf->getOrigin();
+    float bxint = bhf->getXInterval();
+    float byint = bhf->getYInterval();
+
+    // Figure out the start coordinate in cells of the start of this tile, within the boundary tile
+    float start = (origin.y() - borigin.y()) / byint;
+
+    // Calculate the step amount (in cells) in the boundary tile for each 1 cell step in this tile
+    float step = yint / byint;
+
+    float cell = start;
+
+    // Loop through this tiles boundary heights
+    for(int j = 0; j < rows; j++)
+    {
+        // Get the lower coordinate
+        int cell0 = (int)cell;
+
+        float z =0.0f;
+
+        if(cell0 == cell || cell0 == brows)
+        {
+            z = bhf->getHeight(0, cell0);
+        }
+        else
+        {
+            // get the boundary height at each coordinate then interpolate
+            float z0 = bhf->getHeight(0, cell0);
+            float z1 = bhf->getHeight(0, cell0 + 1);
+
+            if(z0 == NO_DATA_VALUE || z1 == NO_DATA_VALUE)
+            {
+                z = NO_DATA_VALUE;
+            }
+            else
+            {
+                z = z0 + (z1 - z0) * (cell - cell0);
+            }
+        }
+
+        if(z != NO_DATA_VALUE)
+        {
+            osg::Vec3d ndc( 1.0, ((double)j)/(double)(rows-1), z);
+
+            osg::Vec3d model;
+            _model->_tileLocator->unitToModel( ndc, model );
+            osg::Vec3d v = model - center;
+
+            (*va)[j * cols + (cols - 1)] = v;
+        }
+
+        cell += step;
+    }
+
+    va->dirty();
+
+    _boundTileE = _boundTileE_pending;
+    _boundTileE_pending = 0L;
+}
+
+void
+TileNode::AdjustEdgeS(osg::Vec3d center)
+{
+    // Get the vertex array to adjust
+    osg::Vec3Array* va = getVertexArray();
+
+    // Get heightfield of this tile
+    osg::HeightField* hf  = _model->_elevationData.getHeightField();
+    int rows = hf->getNumRows();
+    int cols = hf->getNumColumns();
+    osg::Vec3 origin = hf->getOrigin();
+    float xint = hf->getXInterval();
+    float yint = hf->getYInterval();
+
+    // Get heightfield of bounding tile
+    osg::HeightField* bhf  = _boundTileS_pending->getTileModel()->_elevationData.getHeightField();
+    int brows = bhf->getNumRows();
+    int bcols = bhf->getNumColumns();
+    osg::Vec3 borigin = bhf->getOrigin();
+    float bxint = bhf->getXInterval();
+    float byint = bhf->getYInterval();
+
+    // Figure out the start coordinate in cells of the start of this tile, within the boundary tile
+    float start = (origin.x() - borigin.x()) / bxint;
+
+    // Calculate the step amount (in cells) in the boundary tile for each 1 cell step in this tile
+    float step = xint / bxint;
+
+    float cell = start;
+
+    // Loop through this tiles boundary heights
+    for(int i = 0; i < cols; i++)
+    {
+        // Get the lower coordinate
+        int cell0 = (int)cell;
+
+        float z =0.0f;
+
+        if(cell0 == cell || cell0 == brows)
+        {
+            z = bhf->getHeight(cell0, brows - 1);
+        }
+        else
+        {
+            // get the boundary height at each coordinate then interpolate
+            float z0 = bhf->getHeight(cell0, brows - 1);
+            float z1 = bhf->getHeight(cell0 + 1, brows - 1);
+
+            if(z0 == NO_DATA_VALUE || z1 == NO_DATA_VALUE)
+            {
+                z = NO_DATA_VALUE;
+            }
+            else
+            {
+                z = z0 + (z1 - z0) * (cell - cell0);
+            }
+        }
+
+        if(z != NO_DATA_VALUE)
+        {
+            osg::Vec3d ndc( ((double)i)/(double)(cols-1), 0.0, z);
+
+            osg::Vec3d model;
+            _model->_tileLocator->unitToModel( ndc, model );
+            osg::Vec3d v = model - center;
+
+            (*va)[i] = v;
+        }
+
+        cell += step;
+    }
+
+    va->dirty();
+
+    _boundTileS = _boundTileS_pending;
+    _boundTileS_pending = 0L;
+}
+
+void
+TileNode::ResetEdgeW()
+{
+    // Get the vertex array to adjust
+    osg::Vec3Array* va = getVertexArray();
+
+    // Get heightfield of this tile
+    osg::HeightField* hf  = _model->_elevationData.getHeightField();
+    int rows = hf->getNumRows();
+    int cols = hf->getNumColumns();
+    osg::Vec3 origin = hf->getOrigin();
+    float xint = hf->getXInterval();
+    float yint = hf->getYInterval();
+
+    for(int j = 0; j < rows; j++)
+    {
+        float z = hf->getHeight(0, j);
+        if(z != NO_DATA_VALUE)
+        {
+            osg::Vec3d ndc( 0.0, ((double)j)/(double)(rows-1), z);
+
+            osg::Vec3d model;
+            _model->_tileLocator->unitToModel( ndc, model );
+            osg::Vec3d v = model - getMatrix().getTrans();
+
+            (*va)[j * cols] = v;
+        }
+    }
+
+    va->dirty();
+}
+
+void
+TileNode::ResetEdgeN()
+{
+    // Get the vertex array to adjust
+    osg::Vec3Array* va = getVertexArray();
+
+    // Get heightfield of this tile
+    osg::HeightField* hf  = _model->_elevationData.getHeightField();
+    int rows = hf->getNumRows();
+    int cols = hf->getNumColumns();
+    osg::Vec3 origin = hf->getOrigin();
+    float xint = hf->getXInterval();
+    float yint = hf->getYInterval();
+
+    for(int i = 0; i < cols; i++)
+    {
+        float z = hf->getHeight(i, rows - 1);
+        if(z != NO_DATA_VALUE)
+        {
+            osg::Vec3d ndc( ((double)i)/(double)(cols-1), 1.0, z);
+
+            osg::Vec3d model;
+            _model->_tileLocator->unitToModel( ndc, model );
+            osg::Vec3d v = model - getMatrix().getTrans();
+
+            (*va)[(rows - 1) * cols + i] = v;
+        }
+    }
+
+    va->dirty();
+}
+
+void
+TileNode::ResetEdgeE()
+{
+    // Get the vertex array to adjust
+    osg::Vec3Array* va = getVertexArray();
+
+    // Get heightfield of this tile
+    osg::HeightField* hf  = _model->_elevationData.getHeightField();
+    int rows = hf->getNumRows();
+    int cols = hf->getNumColumns();
+    osg::Vec3 origin = hf->getOrigin();
+    float xint = hf->getXInterval();
+    float yint = hf->getYInterval();
+
+    for(int j = 0; j < rows; j++)
+    {
+        float z = hf->getHeight(cols - 1, j);
+        if(z != NO_DATA_VALUE)
+        {
+            osg::Vec3d ndc( 1.0, ((double)j)/(double)(rows-1), z);
+
+            osg::Vec3d model;
+            _model->_tileLocator->unitToModel( ndc, model );
+            osg::Vec3d v = model - getMatrix().getTrans();
+
+            (*va)[j * cols + (cols - 1)] = v;
+        }
+    }
+
+    va->dirty();
+}
+
+void
+TileNode::ResetEdgeS()
+{
+    // Get the vertex array to adjust
+    osg::Vec3Array* va = getVertexArray();
+
+    // Get heightfield of this tile
+    osg::HeightField* hf  = _model->_elevationData.getHeightField();
+    int rows = hf->getNumRows();
+    int cols = hf->getNumColumns();
+    osg::Vec3 origin = hf->getOrigin();
+    float xint = hf->getXInterval();
+    float yint = hf->getYInterval();
+
+    for(int i = 0; i < cols; i++)
+    {
+        float z = hf->getHeight(i, 0);
+        if(z != NO_DATA_VALUE)
+        {
+            osg::Vec3d ndc( ((double)i)/(double)(cols-1), 0.0, z);
+
+            osg::Vec3d model;
+            _model->_tileLocator->unitToModel( ndc, model );
+            osg::Vec3d v = model - getMatrix().getTrans();
+
+            (*va)[i] = v;
+        }
+    }
+
+    va->dirty();
+}
+

@@ -254,6 +254,12 @@ TileGroup::GetDisplayedTilesForTarget(unsigned int x, unsigned int y, unsigned i
     if(_tilenode->getUsedLastFrame())
     {
         tnv.push_back(_tilenode);
+
+        const TileKey& key = _tilenode->getTileModel()->_tileKey;
+        unsigned int lod = key.getLOD();
+        unsigned int x = key.getTileX();
+        unsigned int y = key.getTileY();
+//        std::cout << "      Displayed TileNode: " << _tilenode << " (" << x << ", " << y << ", " << lod << ")" << "\n";
     }
     else
     {
@@ -261,16 +267,16 @@ TileGroup::GetDisplayedTilesForTarget(unsigned int x, unsigned int y, unsigned i
         // If this LOD is greater than the target LOD, then we will need to include all subtiles along the requested boundary.
         unsigned int thislod = _tilenode->getKey().getLOD();
 
-        if(thislod <= lod)
+        if(thislod < lod)
         {
             // Work out the index of the subtile that will lead us to our target tile.
             // We do this by looking at the most significant bit of the provided x & y location at LOD0 to provide the x & y index of the target subtile,
             // working our way to the LSB at LOD lod.
 
             // Calculate which bit to use
-            unsigned int bit = 0x01 << ( lod - thislod );
-            unsigned ix = x || (0x01 << bit);
-            unsigned iy = y || (0x01 << bit);
+            unsigned int bit = 0x01 << ( lod - thislod - 1);
+            unsigned int ix = x & bit;
+            unsigned int iy = y & bit;
 
             // Combine to form subtile index
             unsigned index = 0;
@@ -309,7 +315,12 @@ TileGroup::GetDisplayedTilesForTarget(unsigned int x, unsigned int y, unsigned i
 void
 TileGroup::CollectTargetTiles(unsigned int subtile,  int x, unsigned int y, unsigned int lod, MPTerrainEngineNode::Side side, std::vector< TileNode* >& tnv)
 {
-    if ( numSubtilesLoaded() != 4 ) return;
+    if ( numSubtilesLoaded() != 4 )
+    {
+        // We push a NULL pointer onto the vector so that we know how many TileNodes have been used.
+        tnv.push_back(0L);
+        return;
+    }
 
     //Tilenode is the first child, so we need to add 1 to get to first subtile
     TilePagedLOD* tpl = static_cast<TilePagedLOD*>( getChild(1+subtile) );

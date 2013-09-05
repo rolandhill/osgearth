@@ -62,14 +62,14 @@ namespace osgEarth_engine_mp
             Side_N = 0x1 << 1,
             Side_E = 0x1 << 2,
             Side_S = 0x1 << 3,
-            Side_All = 0x1111
+            Side_All = Side_W | Side_N | Side_E | Side_S
         } ;
 
         struct ChangedTile
         {
-            ChangedTile(TileNode* tn, Side is) { _tilenode = tn; _side = is; }
+            ChangedTile(TileNode* tn, int is) { _tilenode = tn; _side = is; }
             osg::ref_ptr<TileNode> _tilenode;
-            Side _side;
+            int _side;
         };
 
         void RegisterChangedTileNode(TileNode* tilenode, Side side);

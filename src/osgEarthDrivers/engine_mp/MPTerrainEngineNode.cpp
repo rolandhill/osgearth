@@ -16,6 +16,9 @@
 * You should have received a copy of the GNU Lesser General Public License
 * along with this program.  If not, see <http://www.gnu.org/licenses/>
 */
+
+#include <bitset>
+
 #include "MPTerrainEngineNode"
 #include "SerialKeyNodeFactory"
 #include "TerrainNode"
@@ -909,6 +912,17 @@ MPTerrainEngineNode::traverse( osg::NodeVisitor& nv )
             _tilesToUpdate.clear();
         }
         BuildTileUpdateVec();
+
+        std::vector< osg::ref_ptr<TileNode> >::iterator it;
+
+        Threading::ScopedWriteLock exclusiveLock( s_tileUpdateMutex );
+
+        for(it = _tilesToUpdate.begin(); it != _tilesToUpdate.end(); it++)
+        {
+            (*it)->AdjustEdges();
+        }
+
+        _tilesToUpdate.clear();
     }
 }
 
@@ -923,10 +937,14 @@ MPTerrainEngineNode::RegisterChangedTileNode(TileNode* tilenode, Side side)
 void
 MPTerrainEngineNode::BuildTileUpdateVec()
 {
+//    std::cout << "\n Building Tile Update Vector\n";
+
     // Avoid calculating these parameters every call
     unsigned int numTilesX0;
     unsigned int numTilesY0;
     _update_mapf->getProfile()->getNumTiles(0, numTilesX0, numTilesY0);
+
+//    std::cout << "Root tiles in X & Y: " << numTilesX0 << ", " << numTilesY0 << "\n";
 
     // Iterate through changed tiles
     std::vector< ChangedTile >::iterator it;
@@ -944,19 +962,24 @@ MPTerrainEngineNode::BuildTileUpdateVec()
         unsigned int numTilesY;
         _update_mapf->getProfile()->getNumTiles(lod, numTilesX, numTilesY);
 
-        if(x == 0) (*it)._side = (Side)( (*it)._side & (~Side_W) );
-        if(y == 0) (*it)._side = (Side)( (*it)._side & (~Side_N) );
-        if(x == numTilesX - 1) (*it)._side = (Side)( (*it)._side & (~Side_E) );
-        if(y == numTilesY - 1) (*it)._side = (Side)( (*it)._side & (~Side_S) );
+        if(x == 0) (*it)._side = (*it)._side & (~Side_W);
+        if(y == 0) (*it)._side = (*it)._side & (~Side_N);
+        if(x == numTilesX - 1) (*it)._side = (*it)._side & (~Side_E);
+        if(y == numTilesY - 1) (*it)._side = (*it)._side & (~Side_S);
 
         unsigned int tilesPerLod0Tile = numTilesX / numTilesX0;
 
+//        std::cout << "Tiles per LOD0 tile: " << tilesPerLod0Tile << "\n";
+
         // Find the TileNode(s) bounding this node on each side and set bounding TileNode* on tile of higher LOD.
-        if((*it)._side || Side_W) MarkBoundingTiles((*it)._tilenode, Side_W, tilesPerLod0Tile, numTilesX0, numTilesY0);
-        if((*it)._side || Side_N) MarkBoundingTiles((*it)._tilenode, Side_N, tilesPerLod0Tile, numTilesX0, numTilesY0);
-        if((*it)._side || Side_E) MarkBoundingTiles((*it)._tilenode, Side_E, tilesPerLod0Tile, numTilesX0, numTilesY0);
-        if((*it)._side || Side_S) MarkBoundingTiles((*it)._tilenode, Side_S, tilesPerLod0Tile, numTilesX0, numTilesY0);
+        if((*it)._side & Side_W) MarkBoundingTiles((*it)._tilenode, Side_W, tilesPerLod0Tile, numTilesX0, numTilesY0);
+        if((*it)._side & Side_N) MarkBoundingTiles((*it)._tilenode, Side_N, tilesPerLod0Tile, numTilesX0, numTilesY0);
+        if((*it)._side & Side_E) MarkBoundingTiles((*it)._tilenode, Side_E, tilesPerLod0Tile, numTilesX0, numTilesY0);
+        if((*it)._side & Side_S) MarkBoundingTiles((*it)._tilenode, Side_S, tilesPerLod0Tile, numTilesX0, numTilesY0);
     }
+
+//    std::cout << "\n Building Tile Update Vector Completed\n";
+
 }
 
 void
@@ -968,14 +991,19 @@ MPTerrainEngineNode::MarkBoundingTiles(TileNode* tilenode, Side side, unsigned i
     unsigned int x = key.getTileX();
     unsigned int y = key.getTileY();
 
+//    std::bitset<4> flags(side);
+//    std::cout << "\n  Searching for tiles bounding " << "(" << x << ", " << y << ", " << lod << ")" << " on side: " << flags << "\n";
+
     // Calcualte target neighbour
     // We don't need to worry about going outside the tile limits as this was handled in BuildTileUpdateVec
     unsigned int tx = x;
     unsigned int ty = y;
-    if(side == Side_W) x -= 1;
-    else if(side == Side_N) y -= 1;
-    else if(side == Side_E) x += 1;
-    else if(side == Side_S) y += 1;
+    if(side == Side_W) tx -= 1;
+    else if(side == Side_N) ty -= 1;
+    else if(side == Side_E) tx += 1;
+    else if(side == Side_S) ty += 1;
+
+//    std::cout << "    Target tile " << "(" << tx << ", "<< ty << ", " << lod << ")" << "\n";
 
     // Figure out which of the LOD0 tiles contains the target
     unsigned int lod0TileX = tx / tilesPerLod0Tile;
@@ -985,6 +1013,8 @@ MPTerrainEngineNode::MarkBoundingTiles(TileNode* tilenode, Side side, unsigned i
     tx = tx - (lod0TileX * tilesPerLod0Tile);
     ty = ty - (lod0TileY * tilesPerLod0Tile);
 
+//    std::cout << "          Target tile located in root tile " << lod0TileX << ", " << lod0TileY << " at offset " << tx << ", " << ty << "\n";
+
     //Set up a vector to hold bounding tilenodes
     std::vector< TileNode* > tnv;
 
@@ -992,11 +1022,18 @@ MPTerrainEngineNode::MarkBoundingTiles(TileNode* tilenode, Side side, unsigned i
     unsigned int index = numTilesY0 * lod0TileX + lod0TileY;
     osg::Node* node = _terrain->getChild(index);
 
+    // If referring to the boundary wrt a neighbour, we will need to use the opposite side
+    Side OtherSide;
+    if(side == Side_W) OtherSide = Side_E;
+    else if(side == Side_N) OtherSide = Side_S;
+    else if(side == Side_E)  OtherSide = Side_W;
+    else if(side == Side_S)  OtherSide = Side_N;
+
     // Node will usually be a TileGroup
     TileGroup* tg = dynamic_cast<TileGroup*>(node);
     if(tg)
     {
-        tg->GetDisplayedTilesForTarget(tx, ty, lod, side, tnv);
+        tg->GetDisplayedTilesForTarget(tx, ty, lod, OtherSide, tnv);
     }
     else
     {
@@ -1024,15 +1061,10 @@ MPTerrainEngineNode::MarkBoundingTiles(TileNode* tilenode, Side side, unsigned i
     else
     {
         // As we are marking the 'other' tiles, we need to reverse the side
-        Side otherside;
-        if(side == Side_W) otherside = Side_E;
-        else if(side == Side_N) otherside = Side_S;
-        else if(side == Side_E)  otherside = Side_W;
-        else if(side == Side_S)  otherside = Side_N;
         std::vector< TileNode* >::iterator it;
-        for( it = tnv.begin(); it < tnv.end(); it++)
+        for( it = tnv.begin(); it != tnv.end(); it++)
         {
-            QueueTileForUpdate(*it, otherside, tilenode);
+            QueueTileForUpdate(*it, OtherSide, tilenode);
         }
     }
 }
@@ -1040,10 +1072,13 @@ MPTerrainEngineNode::MarkBoundingTiles(TileNode* tilenode, Side side, unsigned i
 void
 MPTerrainEngineNode::QueueTileForUpdate(TileNode* tilenode, Side side, TileNode* target)
 {
-    if(side == Side_W) tilenode->setBoundTileW(tilenode);
-    else if(side == Side_N) tilenode->setBoundTileN(tilenode);
-    else if(side == Side_E) tilenode->setBoundTileE(tilenode);
-    else if(side == Side_S) tilenode->setBoundTileS(tilenode);
+    //We should expect some NULL pointers
+    if(!tilenode) return;
+
+    if(side == Side_W) tilenode->setBoundTileW(target);
+    else if(side == Side_N) tilenode->setBoundTileN(target);
+    else if(side == Side_E) tilenode->setBoundTileE(target);
+    else if(side == Side_S) tilenode->setBoundTileS(target);
 
     //Search vector to see if TileNode is already there
     std::vector< osg::ref_ptr<TileNode> >::iterator it;
@@ -1052,8 +1087,21 @@ MPTerrainEngineNode::QueueTileForUpdate(TileNode* tilenode, Side side, TileNode*
 
     it = std::find(_tilesToUpdate.begin(), _tilesToUpdate.end(), tilenode);
 
+//    const TileKey& key = tilenode->getTileModel()->_tileKey;
+//    unsigned int lod = key.getLOD();
+//    unsigned int x = key.getTileX();
+//    unsigned int y = key.getTileY();
+//
+//    std::bitset<4> flags(side);
+
     if(it == _tilesToUpdate.end())
     {
         _tilesToUpdate.push_back(tilenode);
+
+//        std::cout << "TileNode added: " << tilenode << "(" << x << ", " << y << ", " << lod << ")" << "  Side(s): " << flags << " with target " << target << "\n";
     }
+//    else
+//    {
+//        std::cout << "TileNode updated: " << tilenode << "(" << x << ", " << y << ", " << lod << ")" << "  Side(s): " << flags << " with target " << target <<"\n";
+//    }
 }
