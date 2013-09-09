@@ -79,11 +79,13 @@ TileGroup::traverse(osg::NodeVisitor& nv)
             _traverseSubtiles = false;
         }
 
+        bool usedTileNode = false;
+
         // if we are out of subtile range, or we're in range but the subtiles are
         // not all loaded yet, or we are skipping subtiles, draw the current tile.
         if ( range > _subtileRange || _numSubtilesLoaded < 4 || !_traverseSubtiles )
         {
-            if(!_tilenode->getUsedLastFrame())
+            if( nv.getVisitorType() == nv.CULL_VISITOR && !_tilenode->getUsedLastFrame() )
             {
                 for( unsigned q=0; q<4; ++q )
                 {
@@ -93,12 +95,16 @@ TileGroup::traverse(osg::NodeVisitor& nv)
             }
 
             _tilenode->accept( nv );
+            usedTileNode = true;
         }
 
         // if we're in range, traverse the subtiles.
         if ( _traverseSubtiles && range <= _subtileRange )
         {
-            _tilenode->resetUsedLastFrameFlag();
+            if( nv.CULL_VISITOR && !usedTileNode )
+            {
+                _tilenode->resetUsedLastFrameFlag();
+            }
 
             for( unsigned q=0; q<4; ++q )
             {
@@ -137,12 +143,6 @@ TileGroup::GetDisplayedTilesForTarget(unsigned int x, unsigned int y, unsigned i
     if(_tilenode->getUsedLastFrame())
     {
         tnv.push_back(_tilenode);
-
-        const TileKey& key = _tilenode->getTileModel()->_tileKey;
-        unsigned int lod = key.getLOD();
-        unsigned int x = key.getTileX();
-        unsigned int y = key.getTileY();
-//        std::cout << "      Displayed TileNode: " << _tilenode << " (" << x << ", " << y << ", " << lod << ")" << "\n";
     }
     else
     {
@@ -200,8 +200,8 @@ TileGroup::CollectTargetTiles(unsigned int subtile,  int x, unsigned int y, unsi
 {
     if ( numSubtilesLoaded() != 4 )
     {
-        // We push a NULL pointer onto the vector so that we know how many TileNodes have been used.
-        tnv.push_back(0L);
+//        // We push a NULL pointer onto the vector so that we know how many TileNodes have been used.
+//        tnv.push_back(0L);
         return;
     }
 

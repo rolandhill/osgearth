@@ -56,6 +56,7 @@ _lastTraversalFrame( 0 )
     stateset->addUniform( _bornUniform );
 
     _usedLastFrame = false;
+    _terrainEngineNode = 0L;
 }
 
 
@@ -88,33 +89,12 @@ TileNode::computeBound() const
 void
 TileNode::traverse( osg::NodeVisitor& nv )
 {
+//        CheckOrphanedBoundaries();
+
     // TODO: not sure we need this.
     if ( nv.getVisitorType() == nv.CULL_VISITOR )
     {
-        //Check if the boundry tiles are still active. If not, then remove any adjustments
-        if(_boundTileW.valid() && !_boundTileW->getUsedLastFrame())
-        {
-            _boundTileW = 0L;
-            ResetEdgeW();
-        }
-
-        if(_boundTileN.valid() && !_boundTileN->getUsedLastFrame())
-        {
-            _boundTileN = 0L;
-            ResetEdgeN();
-        }
-
-        if(_boundTileE.valid() && !_boundTileE->getUsedLastFrame())
-        {
-            _boundTileE = 0L;
-            ResetEdgeE();
-        }
-
-        if(_boundTileS.valid() && !_boundTileS->getUsedLastFrame())
-        {
-            _boundTileS = 0L;
-            ResetEdgeS();
-        }
+//        CheckOrphanedBoundaries();
 
         osg::ClusterCullingCallback* ccc = dynamic_cast<osg::ClusterCullingCallback*>(getCullCallback());
         if (ccc)
@@ -142,11 +122,15 @@ TileNode::traverse( osg::NodeVisitor& nv )
         // We therefore notify the TerrainEngineNode if it is being turned on from off.
         if(!_usedLastFrame)
         {
-            _terrainEngineNode->RegisterChangedTileNode(this, MPTerrainEngineNode::Side_All);
+            if(isValid()) _terrainEngineNode->RegisterChangedTileNode(this, MPTerrainEngineNode::Side_All);
         }
+
         _usedLastFrame = true;
+
+//        getVertexArray()->dirty();
     }
 
+    if(getVertexArray()) getVertexArray()->dirty();
     osg::MatrixTransform::traverse( nv );
 }
 
@@ -168,6 +152,11 @@ TileNode::resetUsedLastFrameFlag()
     _boundTileN = 0L;
     _boundTileE = 0L;
     _boundTileS = 0L;
+
+    _boundTileW_pending = 0L;
+    _boundTileN_pending = 0L;
+    _boundTileE_pending = 0L;
+    _boundTileS_pending = 0L;
 }
 
 osg::Vec3Array*
@@ -194,10 +183,36 @@ TileNode::getVertexArray()
     return va;
 }
 
+void TileNode::CheckOrphanedBoundaries()
+{
+    //Check if the boundry tiles are still active. If not, then remove any adjustments
+    if(_boundTileW.valid() && !_boundTileW->getUsedLastFrame())
+    {
+        ResetEdgeW();
+    }
+
+    if(_boundTileN.valid() && !_boundTileN->getUsedLastFrame())
+    {
+        ResetEdgeN();
+    }
+
+    if(_boundTileE.valid() && !_boundTileE->getUsedLastFrame())
+    {
+        ResetEdgeE();
+    }
+
+    if(_boundTileS.valid() && !_boundTileS->getUsedLastFrame())
+    {
+        ResetEdgeS();
+    }
+}
+
 void
 TileNode::AdjustEdges()
 {
     osg::Vec3d center = getMatrix().getTrans();
+
+    std::cout << " --------- New Tile\n";
 
     // Check each boundary to see if an adjustment is required
     if(_boundTileW_pending.valid()) AdjustEdgeW(center);
@@ -209,19 +224,18 @@ TileNode::AdjustEdges()
 void
 TileNode::AdjustEdgeW(osg::Vec3d center)
 {
-//    const TileKey& key = getTileModel()->_tileKey;
-//    unsigned int lod = key.getLOD();
+    _boundTileW_pending->CheckOrphanedBoundaries();
+
+    const TileKey& key = getTileModel()->_tileKey;
+    unsigned int lod = key.getLOD();
 //    unsigned int x = key.getTileX();
-//    unsigned int y = key.getTileY();
-//
-//    std::cout << "\n Adjusting West Side of " << this << "(" << x << ", " << y << ", " << lod << ")" << "\n";
-//
-//    const TileKey& key2 = _boundTileW_pending->getTileModel()->_tileKey;
-//    unsigned int lod2 = key2.getLOD();
-//    unsigned int x2 = key2.getTileX();
-//    unsigned int y2 = key2.getTileY();
-//    std::cout << "\n                  using " << _boundTileW << "(" << x2 << ", " << y2 << ", " << lod2 << ")" << "\n";
-//
+    unsigned int y = key.getTileY();
+
+    const TileKey& bkey = _boundTileW_pending->getTileModel()->_tileKey;
+    unsigned int blod = bkey.getLOD();
+//    unsigned int bx = bkey.getTileX();
+    unsigned int by = bkey.getTileY();
+
     // Get the vertex array to adjust
     osg::Vec3Array* va = getVertexArray();
 
@@ -229,31 +243,33 @@ TileNode::AdjustEdgeW(osg::Vec3d center)
     osg::HeightField* hf  = _model->_elevationData.getHeightField();
     int rows = hf->getNumRows();
     int cols = hf->getNumColumns();
-    osg::Vec3 origin = hf->getOrigin();
-    float xint = hf->getXInterval();
-    float yint = hf->getYInterval();
-
-//    if(_model->_sampleRatio != 1.0f) std::cout << "Sample Ratio is: " << _model->_sampleRatio;
 
     // Get heightfield of bounding tile
     osg::HeightField* bhf  = _boundTileW_pending->getTileModel()->_elevationData.getHeightField();
     int brows = bhf->getNumRows();
     int bcols = bhf->getNumColumns();
-    osg::Vec3 borigin = bhf->getOrigin();
-    float bxint = bhf->getXInterval();
-    float byint = bhf->getYInterval();
 
-//    if(_boundTileW_pending->getTileModel()->_sampleRatio != 1.0f) std::cout << "Sample Ratio is: " << _boundTileW_pending->getTileModel()->_sampleRatio;
+    float step = 1.0f;
+    unsigned int mult = 1;
+//    unsigned int equivx = bx;
+    unsigned int equivy = by;
+    for(int i = blod; i < lod; i++)
+    {
+        step = step * 0.5f;
+        mult *= 2;
+//        equivx *= 2;
+        equivy *= 2;
+    }
 
-//    if(lod2 < lod)
-//    {
-//        x = 1;
-//    }
     // Figure out the start coordinate in cells of the start of this tile, within the boundary tile
-    float start = (origin.y() - borigin.y()) / byint;
+    int tilesfromtop = y - equivy;
+    int tilesfrombottom = mult - tilesfromtop - 1;
+    int start = (float)tilesfrombottom * step * (float)brows + 0.1f;
 
-    // Calculate the step amount (in cells) in the boundary tile for each 1 cell step in this tile
-    float step = yint / byint;
+//    int start = (y - equivy) / mult * brows;
+
+    // Flip the start point over as Tiles are +ve down and HeightField is +ve up;
+//    start = brows - ((int)((float)brows * step + 0.1f)) - start;
 
     float cell = start;
 
@@ -308,6 +324,18 @@ TileNode::AdjustEdgeW(osg::Vec3d center)
 void
 TileNode::AdjustEdgeN(osg::Vec3d center)
 {
+    _boundTileN_pending->CheckOrphanedBoundaries();
+
+    const TileKey& key = getTileModel()->_tileKey;
+    unsigned int lod = key.getLOD();
+    unsigned int x = key.getTileX();
+//    unsigned int y = key.getTileY();
+
+    const TileKey& bkey = _boundTileN_pending->getTileModel()->_tileKey;
+    unsigned int blod = bkey.getLOD();
+    unsigned int bx = bkey.getTileX();
+//    unsigned int by = bkey.getTileY();
+
     // Get the vertex array to adjust
     osg::Vec3Array* va = getVertexArray();
 
@@ -315,23 +343,27 @@ TileNode::AdjustEdgeN(osg::Vec3d center)
     osg::HeightField* hf  = _model->_elevationData.getHeightField();
     int rows = hf->getNumRows();
     int cols = hf->getNumColumns();
-    osg::Vec3 origin = hf->getOrigin();
-    float xint = hf->getXInterval();
-    float yint = hf->getYInterval();
 
     // Get heightfield of bounding tile
     osg::HeightField* bhf  = _boundTileN_pending->getTileModel()->_elevationData.getHeightField();
     int brows = bhf->getNumRows();
     int bcols = bhf->getNumColumns();
-    osg::Vec3 borigin = bhf->getOrigin();
-    float bxint = bhf->getXInterval();
-    float byint = bhf->getYInterval();
+
+    float step = 1.0;
+    unsigned int equivx = bx;
+    unsigned int mult = 1;
+//    unsigned int equivy = by;
+    for(int i = blod; i < lod; i++)
+    {
+        step = step * 0.5;
+        mult *= 2;
+//        equivx *= 2;
+        equivx *= 2;
+    }
+
 
     // Figure out the start coordinate in cells of the start of this tile, within the boundary tile
-    float start = (origin.x() - borigin.x()) / bxint;
-
-    // Calculate the step amount (in cells) in the boundary tile for each 1 cell step in this tile
-    float step = xint / bxint;
+    int start = ((float)(x - equivx)) *step * (float)bcols + 0.1f;
 
     float cell = start;
 
@@ -386,6 +418,18 @@ TileNode::AdjustEdgeN(osg::Vec3d center)
 void
 TileNode::AdjustEdgeE(osg::Vec3d center)
 {
+    _boundTileE_pending->CheckOrphanedBoundaries();
+
+    const TileKey& key = getTileModel()->_tileKey;
+    unsigned int lod = key.getLOD();
+//    unsigned int x = key.getTileX();
+    unsigned int y = key.getTileY();
+
+    const TileKey& bkey = _boundTileE_pending->getTileModel()->_tileKey;
+    unsigned int blod = bkey.getLOD();
+//    unsigned int bx = bkey.getTileX();
+    unsigned int by = bkey.getTileY();
+
     // Get the vertex array to adjust
     osg::Vec3Array* va = getVertexArray();
 
@@ -393,23 +437,32 @@ TileNode::AdjustEdgeE(osg::Vec3d center)
     osg::HeightField* hf  = _model->_elevationData.getHeightField();
     int rows = hf->getNumRows();
     int cols = hf->getNumColumns();
-    osg::Vec3 origin = hf->getOrigin();
-    float xint = hf->getXInterval();
-    float yint = hf->getYInterval();
 
     // Get heightfield of bounding tile
     osg::HeightField* bhf  = _boundTileE_pending->getTileModel()->_elevationData.getHeightField();
     int brows = bhf->getNumRows();
     int bcols = bhf->getNumColumns();
-    osg::Vec3 borigin = bhf->getOrigin();
-    float bxint = bhf->getXInterval();
-    float byint = bhf->getYInterval();
+
+    float step = 1.0;
+    unsigned int mult = 1;
+//    unsigned int equivx = bx;
+    unsigned int equivy = by;
+    for(int i = blod; i < lod; i++)
+    {
+        step = step * 0.5;
+        mult *= 2;
+//        equivx *= 2;
+        equivy *= 2;
+    }
 
     // Figure out the start coordinate in cells of the start of this tile, within the boundary tile
-    float start = (origin.y() - borigin.y()) / byint;
+    int tilesfromtop = y - equivy;
+    int tilesfrombottom = mult - tilesfromtop - 1;
+    int start = (float)tilesfrombottom * step * (float)brows + 0.1f;
+//    int start = (y - equivy) / mult * brows;
 
-    // Calculate the step amount (in cells) in the boundary tile for each 1 cell step in this tile
-    float step = yint / byint;
+    // Flip the start point over as Tiles are +ve down and HeightField is +ve up;
+//    start = brows - ((int)((float)brows * step + 0.1f)) - start;
 
     float cell = start;
 
@@ -464,6 +517,18 @@ TileNode::AdjustEdgeE(osg::Vec3d center)
 void
 TileNode::AdjustEdgeS(osg::Vec3d center)
 {
+    _boundTileS_pending->CheckOrphanedBoundaries();
+
+    const TileKey& key = getTileModel()->_tileKey;
+    unsigned int lod = key.getLOD();
+    unsigned int x = key.getTileX();
+//    unsigned int y = key.getTileY();
+
+    const TileKey& bkey = _boundTileS_pending->getTileModel()->_tileKey;
+    unsigned int blod = bkey.getLOD();
+    unsigned int bx = bkey.getTileX();
+//    unsigned int by = bkey.getTileY();
+
     // Get the vertex array to adjust
     osg::Vec3Array* va = getVertexArray();
 
@@ -471,23 +536,26 @@ TileNode::AdjustEdgeS(osg::Vec3d center)
     osg::HeightField* hf  = _model->_elevationData.getHeightField();
     int rows = hf->getNumRows();
     int cols = hf->getNumColumns();
-    osg::Vec3 origin = hf->getOrigin();
-    float xint = hf->getXInterval();
-    float yint = hf->getYInterval();
 
     // Get heightfield of bounding tile
     osg::HeightField* bhf  = _boundTileS_pending->getTileModel()->_elevationData.getHeightField();
     int brows = bhf->getNumRows();
     int bcols = bhf->getNumColumns();
-    osg::Vec3 borigin = bhf->getOrigin();
-    float bxint = bhf->getXInterval();
-    float byint = bhf->getYInterval();
+
+    float step = 1.0;
+    unsigned int equivx = bx;
+    unsigned int mult = 1;
+//    unsigned int equivy = by;
+    for(int i = blod; i < lod; i++)
+    {
+        step = step * 0.5;
+        mult *= 2;
+        equivx *= 2;
+//        equivy *= 2;
+    }
 
     // Figure out the start coordinate in cells of the start of this tile, within the boundary tile
-    float start = (origin.x() - borigin.x()) / bxint;
-
-    // Calculate the step amount (in cells) in the boundary tile for each 1 cell step in this tile
-    float step = xint / bxint;
+    int start = ((float)(x - equivx)) *step * (float)bcols + 0.1f;
 
     float cell = start;
 
@@ -569,6 +637,8 @@ TileNode::ResetEdgeW()
     }
 
     va->dirty();
+
+    _boundTileW = 0L;
 }
 
 void
@@ -601,6 +671,8 @@ TileNode::ResetEdgeN()
     }
 
     va->dirty();
+
+    _boundTileN = 0L;
 }
 
 void
@@ -633,6 +705,8 @@ TileNode::ResetEdgeE()
     }
 
     va->dirty();
+
+    _boundTileE = 0L;
 }
 
 void
@@ -665,5 +739,7 @@ TileNode::ResetEdgeS()
     }
 
     va->dirty();
+
+    _boundTileS = 0L;
 }
 

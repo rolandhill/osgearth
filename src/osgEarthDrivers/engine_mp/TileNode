@@ -75,6 +75,7 @@ namespace osgEarth_engine_mp
 		void setBoundTileS(TileNode* tilenode) { _boundTileS_pending = tilenode; }
 
 		void AdjustEdges();
+		void CheckOrphanedBoundaries();
 
     public: // OVERRIDES
 
