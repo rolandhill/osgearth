@@ -149,10 +149,10 @@ TileNode::resetUsedLastFrameFlag()
     _usedLastFrame = false;
 
     //Clear all boudary node data
-    _boundTileW = 0L;
-    _boundTileN = 0L;
-    _boundTileE = 0L;
-    _boundTileS = 0L;
+//    _boundTileW = 0L;
+//    _boundTileN = 0L;
+//    _boundTileE = 0L;
+//    _boundTileS = 0L;
 
     _boundTileW_pending = 0L;
     _boundTileN_pending = 0L;
@@ -239,6 +239,7 @@ TileNode::AdjustEdgeW(osg::Vec3d center)
 
     // Get the vertex array to adjust
     osg::Vec3Array* va = getVertexArray();
+    osg::Vec3Array* bva = _boundTileW_pending->getVertexArray();
 
     // Get heightfield of this tile
     osg::HeightField* hf  = _model->_elevationData.getHeightField();
@@ -250,13 +251,13 @@ TileNode::AdjustEdgeW(osg::Vec3d center)
     int brows = bhf->getNumRows();
     int bcols = bhf->getNumColumns();
 
-    float step = 1.0f;
+    double step = 1.0;
     unsigned int mult = 1;
 //    unsigned int equivx = bx;
     unsigned int equivy = by;
     for(int i = blod; i < lod; i++)
     {
-        step = step * 0.5f;
+        step = step * 0.5;
         mult *= 2;
 //        equivx *= 2;
         equivy *= 2;
@@ -265,52 +266,61 @@ TileNode::AdjustEdgeW(osg::Vec3d center)
     // Figure out the start coordinate in cells of the start of this tile, within the boundary tile
     int tilesfromtop = y - equivy;
     int tilesfrombottom = mult - tilesfromtop - 1;
-    int start = (float)tilesfrombottom * step * (float)brows + 0.1f;
+    int start = (float)tilesfrombottom * step * (float)brows + 0.1;
 
 //    int start = (y - equivy) / mult * brows;
 
     // Flip the start point over as Tiles are +ve down and HeightField is +ve up;
 //    start = brows - ((int)((float)brows * step + 0.1f)) - start;
 
-    float cell = start;
+    double cell = start;
 
     // Loop through this tiles boundary heights
     for(int j = 0; j < rows; j++)
     {
         // Get the lower coordinate
-        int cell0 = cell + 0.1f;
+        int cell0 = cell + 0.001;
 
-        float z = 0.0f;
+//        float z = 0.0;
+        osg::Vec3 vert;
 
         if(fabs(cell0 - cell) < 0.0001 || cell0 == brows - 1)
         {
-            z = bhf->getHeight(bcols - 1, cell0);
+            //z = bhf->getHeight(bcols - 1, cell0);
+            vert = (*bva)[cell0 * bcols + bcols - 1];
         }
         else
         {
             // get the boundary height at each coordinate then interpolate
-            float z0 = bhf->getHeight(bcols - 1, cell0);
-            float z1 = bhf->getHeight(bcols - 1, cell0 + 1);
+//            float z0 = bhf->getHeight(bcols - 1, cell0);
+//            float z1 = bhf->getHeight(bcols - 1, cell0 + 1);
+            osg::Vec3 vert0 = (*bva)[cell0 * bcols + bcols - 1];
+            osg::Vec3 vert1 = (*bva)[(cell0 + 1) * bcols + bcols - 1];
 
-            if(z0 == NO_DATA_VALUE || z1 == NO_DATA_VALUE)
-            {
-                z = NO_DATA_VALUE;
-            }
-            else
-            {
-                z = z0 + (z1 - z0) * (cell - (float)cell0);
-            }
+//            if(z0 == NO_DATA_VALUE || z1 == NO_DATA_VALUE)
+//            {
+//                z = NO_DATA_VALUE;
+//            }
+//            else
+//            {
+//                z = z0 + (z1 - z0) * (cell - (double)cell0);
+//            }
+            vert = vert0 + ((vert1 - vert0) * (cell - (double)cell0));
         }
 
-        if(z != NO_DATA_VALUE)
+//        if(z != NO_DATA_VALUE)
+//        {
+//            osg::Vec3d ndc( 0.0, ((double)j)/(double)(rows-1), z);
+//
+//            osg::Vec3d model;
+//            _model->_tileLocator->unitToModel( ndc, model );
+//            osg::Vec3d v = model - center;
+//
+//            (*va)[j * cols] = v;
+//        }
+        if(vert.z() > 0.0)
         {
-            osg::Vec3d ndc( 0.0, ((double)j)/(double)(rows-1), z);
-
-            osg::Vec3d model;
-            _model->_tileLocator->unitToModel( ndc, model );
-            osg::Vec3d v = model - center;
-
-            (*va)[j * cols] = v;
+            (*va)[j * cols] = vert + _boundTileW_pending->getMatrix().getTrans() - getMatrix().getTrans();
         }
 
         cell += step;
@@ -350,7 +360,7 @@ TileNode::AdjustEdgeN(osg::Vec3d center)
     int brows = bhf->getNumRows();
     int bcols = bhf->getNumColumns();
 
-    float step = 1.0;
+    double step = 1.0;
     unsigned int equivx = bx;
     unsigned int mult = 1;
 //    unsigned int equivy = by;
@@ -364,17 +374,17 @@ TileNode::AdjustEdgeN(osg::Vec3d center)
 
 
     // Figure out the start coordinate in cells of the start of this tile, within the boundary tile
-    int start = ((float)(x - equivx)) *step * (float)bcols + 0.1f;
+    int start = ((float)(x - equivx)) *step * (float)bcols + 0.1;
 
-    float cell = start;
+    double cell = start;
 
     // Loop through this tiles boundary heights
     for(int i = 0; i < cols; i++)
     {
         // Get the lower coordinate
-        int cell0 = cell + 0.1f;
+        int cell0 = cell + 0.001;
 
-        float z = 0.0f;
+        float z = 0.0;
 
         if(fabs(cell0 - cell) < 0.0001 || cell0 == bcols - 1)
         {
@@ -392,7 +402,7 @@ TileNode::AdjustEdgeN(osg::Vec3d center)
             }
             else
             {
-                z = z0 + (z1 - z0) * (cell - cell0);
+                z = z0 + (z1 - z0) * (cell - (double)cell0);
             }
         }
 
@@ -444,7 +454,7 @@ TileNode::AdjustEdgeE(osg::Vec3d center)
     int brows = bhf->getNumRows();
     int bcols = bhf->getNumColumns();
 
-    float step = 1.0;
+    double step = 1.0;
     unsigned int mult = 1;
 //    unsigned int equivx = bx;
     unsigned int equivy = by;
@@ -459,21 +469,21 @@ TileNode::AdjustEdgeE(osg::Vec3d center)
     // Figure out the start coordinate in cells of the start of this tile, within the boundary tile
     int tilesfromtop = y - equivy;
     int tilesfrombottom = mult - tilesfromtop - 1;
-    int start = (float)tilesfrombottom * step * (float)brows + 0.1f;
+    int start = (float)tilesfrombottom * step * (float)brows + 0.1;
 //    int start = (y - equivy) / mult * brows;
 
     // Flip the start point over as Tiles are +ve down and HeightField is +ve up;
 //    start = brows - ((int)((float)brows * step + 0.1f)) - start;
 
-    float cell = start;
+    double cell = start;
 
     // Loop through this tiles boundary heights
     for(int j = 0; j < rows; j++)
     {
         // Get the lower coordinate
-        int cell0 = cell + 0.1f;
+        int cell0 = cell + 0.001;
 
-        float z =0.0f;
+        float z =0.0;
 
         if(fabs(cell0 - cell) < 0.0001 || cell0 == brows - 1)
         {
@@ -491,7 +501,7 @@ TileNode::AdjustEdgeE(osg::Vec3d center)
             }
             else
             {
-                z = z0 + (z1 - z0) * (cell - cell0);
+                z = z0 + (z1 - z0) * (cell - (double)cell0);
             }
         }
 
@@ -543,7 +553,7 @@ TileNode::AdjustEdgeS(osg::Vec3d center)
     int brows = bhf->getNumRows();
     int bcols = bhf->getNumColumns();
 
-    float step = 1.0;
+    double step = 1.0;
     unsigned int equivx = bx;
     unsigned int mult = 1;
 //    unsigned int equivy = by;
@@ -556,17 +566,17 @@ TileNode::AdjustEdgeS(osg::Vec3d center)
     }
 
     // Figure out the start coordinate in cells of the start of this tile, within the boundary tile
-    int start = ((float)(x - equivx)) *step * (float)bcols + 0.1f;
+    int start = ((float)(x - equivx)) *step * (float)bcols + 0.1;
 
-    float cell = start;
+    double cell = start;
 
     // Loop through this tiles boundary heights
     for(int i = 0; i < cols; i++)
     {
         // Get the lower coordinate
-        int cell0 = cell + 0.1f;
+        int cell0 = cell + 0.001;
 
-        float z =0.0f;
+        float z =0.0;
 
         if(fabs(cell0 - cell) < 0.0001 || cell0 == brows - 1)
         {
@@ -584,7 +594,7 @@ TileNode::AdjustEdgeS(osg::Vec3d center)
             }
             else
             {
-                z = z0 + (z1 - z0) * (cell - cell0);
+                z = z0 + (z1 - z0) * (cell - (double)cell0);
             }
         }
 
@@ -618,9 +628,6 @@ TileNode::ResetEdgeW()
     osg::HeightField* hf  = _model->_elevationData.getHeightField();
     int rows = hf->getNumRows();
     int cols = hf->getNumColumns();
-    osg::Vec3 origin = hf->getOrigin();
-    float xint = hf->getXInterval();
-    float yint = hf->getYInterval();
 
     for(int j = 0; j < rows; j++)
     {
@@ -652,9 +659,6 @@ TileNode::ResetEdgeN()
     osg::HeightField* hf  = _model->_elevationData.getHeightField();
     int rows = hf->getNumRows();
     int cols = hf->getNumColumns();
-    osg::Vec3 origin = hf->getOrigin();
-    float xint = hf->getXInterval();
-    float yint = hf->getYInterval();
 
     for(int i = 0; i < cols; i++)
     {
@@ -686,9 +690,6 @@ TileNode::ResetEdgeE()
     osg::HeightField* hf  = _model->_elevationData.getHeightField();
     int rows = hf->getNumRows();
     int cols = hf->getNumColumns();
-    osg::Vec3 origin = hf->getOrigin();
-    float xint = hf->getXInterval();
-    float yint = hf->getYInterval();
 
     for(int j = 0; j < rows; j++)
     {
@@ -720,9 +721,6 @@ TileNode::ResetEdgeS()
     osg::HeightField* hf  = _model->_elevationData.getHeightField();
     int rows = hf->getNumRows();
     int cols = hf->getNumColumns();
-    osg::Vec3 origin = hf->getOrigin();
-    float xint = hf->getXInterval();
-    float yint = hf->getYInterval();
 
     for(int i = 0; i < cols; i++)
     {
