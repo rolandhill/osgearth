@@ -280,7 +280,7 @@ TileNode::AdjustEdgeW(osg::Vec3d center)
         // Get the lower coordinate
         int cell0 = cell + 0.1f;
 
-        float z =0.0f;
+        float z = 0.0f;
 
         if(fabs(cell0 - cell) < 0.0001 || cell0 == brows - 1)
         {
@@ -374,7 +374,7 @@ TileNode::AdjustEdgeN(osg::Vec3d center)
         // Get the lower coordinate
         int cell0 = cell + 0.1f;
 
-        float z =0.0f;
+        float z = 0.0f;
 
         if(fabs(cell0 - cell) < 0.0001 || cell0 == bcols - 1)
         {
