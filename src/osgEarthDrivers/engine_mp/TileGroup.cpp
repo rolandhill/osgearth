@@ -254,12 +254,6 @@ TileGroup::GetDisplayedTilesForTarget(unsigned int x, unsigned int y, unsigned i
     if(_tilenode->getUsedLastFrame())
     {
         tnv.push_back(_tilenode);
-
-        const TileKey& key = _tilenode->getTileModel()->_tileKey;
-        unsigned int lod = key.getLOD();
-        unsigned int x = key.getTileX();
-        unsigned int y = key.getTileY();
-//        std::cout << "      Displayed TileNode: " << _tilenode << " (" << x << ", " << y << ", " << lod << ")" << "\n";
     }
     else
     {
@@ -317,8 +311,8 @@ TileGroup::CollectTargetTiles(unsigned int subtile,  int x, unsigned int y, unsi
 {
     if ( numSubtilesLoaded() != 4 )
     {
-        // We push a NULL pointer onto the vector so that we know how many TileNodes have been used.
-        tnv.push_back(0L);
+//        // We push a NULL pointer onto the vector so that we know how many TileNodes have been used.
+//        tnv.push_back(0L);
         return;
     }
 
