@@ -282,7 +282,7 @@ TileNode::AdjustEdgeW(osg::Vec3d center)
 
         float z =0.0f;
 
-        if(cell0 == cell || cell0 == brows)
+        if(fabs(cell0 - cell) < 0.0001 || cell0 == brows - 1)
         {
             z = bhf->getHeight(bcols - 1, cell0);
         }
@@ -376,7 +376,7 @@ TileNode::AdjustEdgeN(osg::Vec3d center)
 
         float z =0.0f;
 
-        if(cell0 == cell || cell0 == bcols)
+        if(fabs(cell0 - cell) < 0.0001 || cell0 == bcols - 1)
         {
             z = bhf->getHeight(cell0, 0);
         }
@@ -475,7 +475,7 @@ TileNode::AdjustEdgeE(osg::Vec3d center)
 
         float z =0.0f;
 
-        if(cell0 == cell || cell0 == brows)
+        if(fabs(cell0 - cell) < 0.0001 || cell0 == brows - 1)
         {
             z = bhf->getHeight(0, cell0);
         }
@@ -568,7 +568,7 @@ TileNode::AdjustEdgeS(osg::Vec3d center)
 
         float z =0.0f;
 
-        if(cell0 == cell || cell0 == brows)
+        if(fabs(cell0 - cell) < 0.0001 || cell0 == brows - 1)
         {
             z = bhf->getHeight(cell0, brows - 1);
         }
