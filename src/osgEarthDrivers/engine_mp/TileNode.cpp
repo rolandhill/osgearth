@@ -277,7 +277,7 @@ TileNode::AdjustEdgeW(osg::Vec3d center)
     for(int j = 0; j < rows; j++)
     {
         // Get the lower coordinate
-        int cell0 = (int)cell;
+        int cell0 = cell + 0.1f;
 
         float z =0.0f;
 
@@ -371,7 +371,7 @@ TileNode::AdjustEdgeN(osg::Vec3d center)
     for(int i = 0; i < cols; i++)
     {
         // Get the lower coordinate
-        int cell0 = (int)cell;
+        int cell0 = cell + 0.1f;
 
         float z =0.0f;
 
@@ -470,7 +470,7 @@ TileNode::AdjustEdgeE(osg::Vec3d center)
     for(int j = 0; j < rows; j++)
     {
         // Get the lower coordinate
-        int cell0 = (int)cell;
+        int cell0 = cell + 0.1f;
 
         float z =0.0f;
 
@@ -563,7 +563,7 @@ TileNode::AdjustEdgeS(osg::Vec3d center)
     for(int i = 0; i < cols; i++)
     {
         // Get the lower coordinate
-        int cell0 = (int)cell;
+        int cell0 = cell + 0.1f;
 
         float z =0.0f;
 
