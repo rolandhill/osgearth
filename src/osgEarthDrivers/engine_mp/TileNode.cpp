@@ -57,6 +57,15 @@ _lastTraversalFrame( 0 )
 
     _usedLastFrame = false;
     _terrainEngineNode = 0L;
+
+    if(_model)
+    {
+        osg::HeightField* hf  = _model->_elevationData.getHeightField();
+        int rows = hf->getNumRows();
+        int cols = hf->getNumColumns();
+
+        _indices.reserve(rows * cols);
+    }
 }
 
 
@@ -208,15 +217,79 @@ void TileNode::CheckOrphanedBoundaries()
 }
 
 void
-TileNode::AdjustEdges()
+TileNode::AdjustEdges(bool sameLod)
 {
     osg::Vec3d center = getMatrix().getTrans();
 
     // Check each boundary to see if an adjustment is required
-    if(_boundTileW_pending.valid()) AdjustEdgeW(center);
-    if(_boundTileN_pending.valid()) AdjustEdgeN(center);
-    if(_boundTileE_pending.valid()) AdjustEdgeE(center);
-    if(_boundTileS_pending.valid()) AdjustEdgeS(center);
+    if(_boundTileW_pending.valid())
+    {
+        // Don't try to match adjoining tiles with the same LOD, just reset them.
+        if(sameLod && getTileModel()->_tileKey.getLOD() == _boundTileW_pending->getTileModel()->_tileKey.getLOD())
+        {
+            ResetEdgeW();
+            // Reset the adjoinging edge of our same-lod neighbour if it hasn't already been reset.
+            if(_boundTileW_pending->getBoundTileE())
+            {
+                _boundTileW_pending->ResetEdgeE();
+                _boundTileW_pending->setBoundTileE(0L);
+            }
+            _boundTileW_pending = 0L;
+        }
+        else if(!sameLod && getTileModel()->_tileKey.getLOD() != _boundTileW_pending->getTileModel()->_tileKey.getLOD()) AdjustEdgeW(center);
+    }
+
+    if(_boundTileN_pending.valid())
+    {
+        // Don't try to match adjoining tiles with the same LOD, just reset them.
+        if(sameLod && getTileModel()->_tileKey.getLOD() == _boundTileN_pending->getTileModel()->_tileKey.getLOD())
+        {
+            ResetEdgeN();
+            // Reset the adjoinging edge of our same-lod neighbour if it hasn't already been reset.
+            if(_boundTileN_pending->getBoundTileS())
+            {
+                _boundTileN_pending->ResetEdgeS();
+                _boundTileN_pending->setBoundTileS(0L);
+            }
+            _boundTileN_pending = 0L;
+        }
+        else if(!sameLod && getTileModel()->_tileKey.getLOD() != _boundTileN_pending->getTileModel()->_tileKey.getLOD()) AdjustEdgeN(center);
+    }
+
+    if(_boundTileE_pending.valid())
+    {
+        // Don't try to match adjoining tiles with the same LOD, just reset them.
+        if(sameLod && getTileModel()->_tileKey.getLOD() == _boundTileE_pending->getTileModel()->_tileKey.getLOD())
+        {
+            ResetEdgeE();
+            // Reset the adjoinging edge of our same-lod neighbour if it hasn't already been reset.
+            if(_boundTileE_pending->getBoundTileW())
+            {
+                _boundTileE_pending->ResetEdgeW();
+                _boundTileE_pending->setBoundTileW(0L);
+            }
+            _boundTileE_pending = 0L;
+        }
+        else if(!sameLod && getTileModel()->_tileKey.getLOD() != _boundTileE_pending->getTileModel()->_tileKey.getLOD()) AdjustEdgeE(center);
+    }
+
+    if(_boundTileS_pending.valid())
+    {
+        // Don't try to match adjoining tiles with the same LOD, just reset them.
+        if(sameLod && getTileModel()->_tileKey.getLOD() == _boundTileS_pending->getTileModel()->_tileKey.getLOD())
+        {
+            ResetEdgeS();
+            // Reset the adjoinging edge of our same-lod neighbour if it hasn't already been reset.
+            if(_boundTileS_pending->getBoundTileN())
+            {
+                _boundTileS_pending->ResetEdgeN();
+                _boundTileS_pending->setBoundTileN(0L);
+            }
+            _boundTileS_pending = 0L;
+        }
+        else if(!sameLod && getTileModel()->_tileKey.getLOD() != _boundTileS_pending->getTileModel()->_tileKey.getLOD()) AdjustEdgeS(center);
+    }
+
 }
 
 void
@@ -259,11 +332,13 @@ TileNode::AdjustEdgeW(osg::Vec3d center)
     // Figure out the start coordinate in cells of the start of this tile, within the boundary tile
     int tilesfromtop = y - equivy;
     int tilesfrombottom = mult - tilesfromtop - 1;
-    int start = (float)tilesfrombottom * step * (float)brows + 0.1;
+    double start = (double)tilesfrombottom * step * (double)(brows - 1);
 
     double cell = start;
 
     osg::Vec3d shift = _boundTileW_pending->getMatrix().getTrans() - getMatrix().getTrans();
+
+    std::vector< short >& bindices = _boundTileW_pending->getIndices();
 
     // Loop through this tiles boundary heights
     for(int j = 0; j < rows; j++)
@@ -271,35 +346,33 @@ TileNode::AdjustEdgeW(osg::Vec3d center)
         // Get the lower coordinate
         int cell0 = cell + 0.001;
 
-        float z = 0.0;
         osg::Vec3 vert;
+        int index = bindices[cell0 * bcols + bcols - 1];
 
-        if(fabs(cell0 - cell) < 0.0001 || cell0 == brows - 1)
+        if(fabs(cell0 - cell) < 0.001 || cell0 == brows - 1)
         {
-            z = bhf->getHeight(bcols - 1, cell0);
-            vert = (*bva)[cell0 * bcols + bcols - 1];
+            if(index >= 0) vert = (*bva)[ index ];
         }
         else
         {
             // get the boundary height at each coordinate then interpolate
-            float z0 = bhf->getHeight(bcols - 1, cell0);
-            float z1 = bhf->getHeight(bcols - 1, cell0 + 1);
+            int index1 = bindices[(cell0 + 1) * bcols + bcols - 1];
 
-            if(z0 == NO_DATA_VALUE || z1 == NO_DATA_VALUE)
+            if(index < 0 || index1 < 0)
             {
-                z = NO_DATA_VALUE;
+                index = -1;
             }
             else
             {
-                osg::Vec3 vert0 = (*bva)[cell0 * bcols + bcols - 1];
-                osg::Vec3 vert1 = (*bva)[(cell0 + 1) * bcols + bcols - 1];
+                osg::Vec3 vert0 = (*bva)[ index ];
+                osg::Vec3 vert1 = (*bva)[ index1 ];
                 vert = vert0 + ((vert1 - vert0) * (cell - (float)cell0));
             }
         }
 
-        if(z != NO_DATA_VALUE)
+        if(index >= 0)
         {
-            (*va)[j * cols] = vert + shift;
+            (*va)[ _indices[j * cols] ] = vert + shift;
         }
 
         cell += step;
@@ -340,21 +413,21 @@ TileNode::AdjustEdgeN(osg::Vec3d center)
 
     double step = 1.0;
     unsigned int equivx = bx;
-    unsigned int mult = 1;
     for(int i = blod; i < lod; i++)
     {
         step = step * 0.5;
-        mult *= 2;
         equivx *= 2;
     }
 
 
     // Figure out the start coordinate in cells of the start of this tile, within the boundary tile
-    int start = ((float)(x - equivx)) *step * (float)bcols + 0.1;
+    double start = ((double)(x - equivx)) *step * (double)(bcols - 1);
 
     double cell = start;
 
     osg::Vec3d shift = _boundTileN_pending->getMatrix().getTrans() - getMatrix().getTrans();
+
+    std::vector< short >& bindices = _boundTileN_pending->getIndices();
 
     // Loop through this tiles boundary heights
     for(int i = 0; i < cols; i++)
@@ -362,35 +435,33 @@ TileNode::AdjustEdgeN(osg::Vec3d center)
         // Get the lower coordinate
         int cell0 = cell + 0.001;
 
-        float z = 0.0;
         osg::Vec3 vert;
+        int index = bindices[cell0];
 
         if(fabs(cell0 - cell) < 0.0001 || cell0 == bcols - 1)
         {
-            z = bhf->getHeight(cell0, 0);
-            vert = (*bva)[cell0];
+            if(index >= 0) vert = (*bva)[ index ];
         }
         else
         {
             // get the boundary height at each coordinate then interpolate
-            float z0 = bhf->getHeight(cell0, 0);
-            float z1 = bhf->getHeight(cell0 + 1, 0);
+            int index1 = bindices[cell0 + 1];
 
-            if(z0 == NO_DATA_VALUE || z1 == NO_DATA_VALUE)
+            if(index < 0 || index1 < 0)
             {
-                z = NO_DATA_VALUE;
+                index = -1;
             }
             else
             {
-                osg::Vec3 vert0 = (*bva)[cell0];
-                osg::Vec3 vert1 = (*bva)[cell0 + 1];
+                osg::Vec3 vert0 = (*bva)[ index ];
+                osg::Vec3 vert1 = (*bva)[ index1 ];
                 vert = vert0 + ((vert1 - vert0) * (cell - (float)cell0));
             }
         }
 
-        if(z != NO_DATA_VALUE)
+        if(index >= 0)
         {
-            (*va)[(rows - 1) * cols + i] = vert + shift;;
+            (*va)[ _indices[(rows - 1) * cols + i] ] = vert + shift;;
         }
 
         cell += step;
@@ -442,11 +513,13 @@ TileNode::AdjustEdgeE(osg::Vec3d center)
     // Figure out the start coordinate in cells of the start of this tile, within the boundary tile
     int tilesfromtop = y - equivy;
     int tilesfrombottom = mult - tilesfromtop - 1;
-    int start = (float)tilesfrombottom * step * (float)brows + 0.1;
+    double start = (double)tilesfrombottom * step * (double)(brows - 1);
 
     double cell = start;
 
     osg::Vec3d shift = _boundTileE_pending->getMatrix().getTrans() - getMatrix().getTrans();
+
+    std::vector< short >& bindices = _boundTileE_pending->getIndices();
 
     // Loop through this tiles boundary heights
     for(int j = 0; j < rows; j++)
@@ -454,35 +527,33 @@ TileNode::AdjustEdgeE(osg::Vec3d center)
         // Get the lower coordinate
         int cell0 = cell + 0.001;
 
-        float z = 0.0;
         osg::Vec3 vert;
+        int index = bindices[cell0 * bcols];
 
         if(fabs(cell0 - cell) < 0.0001 || cell0 == brows - 1)
         {
-            z = bhf->getHeight(0, cell0);
-            vert = (*bva)[cell0 * bcols];
+            if(index >= 0) vert = (*bva)[ index ];
         }
         else
         {
             // get the boundary height at each coordinate then interpolate
-            float z0 = bhf->getHeight(0, cell0);
-            float z1 = bhf->getHeight(0, cell0 + 1);
+            int index1 = bindices[(cell0 + 1) * bcols];
 
-            if(z0 == NO_DATA_VALUE || z1 == NO_DATA_VALUE)
+            if(index < 0 || index1 < 0)
             {
-                z = NO_DATA_VALUE;
+                index = -1;
             }
             else
             {
-                osg::Vec3 vert0 = (*bva)[cell0 * bcols];
-                osg::Vec3 vert1 = (*bva)[(cell0 + 1) * bcols];
+                osg::Vec3 vert0 = (*bva)[ index ];
+                osg::Vec3 vert1 = (*bva)[ index1 ];
                 vert = vert0 + ((vert1 - vert0) * (cell - (float)cell0));
             }
         }
 
-        if(z != NO_DATA_VALUE)
+        if(index >= 0)
         {
-            (*va)[j * cols + (cols - 1)] = vert + shift;;
+            (*va)[ _indices[j * cols + (cols - 1)] ] = vert + shift;;
         }
 
         cell += step;
@@ -523,20 +594,20 @@ TileNode::AdjustEdgeS(osg::Vec3d center)
 
     double step = 1.0;
     unsigned int equivx = bx;
-    unsigned int mult = 1;
     for(int i = blod; i < lod; i++)
     {
         step = step * 0.5;
-        mult *= 2;
         equivx *= 2;
     }
 
     // Figure out the start coordinate in cells of the start of this tile, within the boundary tile
-    int start = ((float)(x - equivx)) * step * (float)bcols + 0.1;
+    double start = ((double)(x - equivx)) * step * (double)(bcols - 1);
 
     double cell = start;
 
     osg::Vec3d shift = _boundTileS_pending->getMatrix().getTrans() - getMatrix().getTrans();
+
+    std::vector< short >& bindices = _boundTileS_pending->getIndices();
 
     // Loop through this tiles boundary heights
     for(int i = 0; i < cols; i++)
@@ -544,35 +615,33 @@ TileNode::AdjustEdgeS(osg::Vec3d center)
         // Get the lower coordinate
         int cell0 = cell + 0.001;
 
-        float z = 0.0;
         osg::Vec3 vert;
+        int index = bindices[(brows - 1) * bcols + cell0];
 
-        if(fabs(cell0 - cell) < 0.0001 || cell0 == brows - 1)
+        if(fabs(cell0 - cell) < 0.0001 || cell0 == bcols - 1)
         {
-            z = bhf->getHeight(cell0, brows - 1);
-            vert = (*bva)[(brows - 1) * bcols + cell0];
+            if(index >= 0) vert = (*bva)[ index ];
         }
         else
         {
             // get the boundary height at each coordinate then interpolate
-            float z0 = bhf->getHeight(cell0, brows - 1);
-            float z1 = bhf->getHeight(cell0 + 1, brows - 1);
+            int index1 = bindices[(brows - 1) * bcols + cell0 + 1];
 
-            if(z0 == NO_DATA_VALUE || z1 == NO_DATA_VALUE)
+            if(index < 0 || index1 < 0)
             {
-                z = NO_DATA_VALUE;
+                index = -1;
             }
             else
             {
-                osg::Vec3 vert0 = (*bva)[(brows - 1) * bcols + cell0];
-                osg::Vec3 vert1 = (*bva)[(brows - 1) * bcols + cell0 + 1];
+                osg::Vec3 vert0 = (*bva)[ index ];
+                osg::Vec3 vert1 = (*bva)[ index1 ];
                 vert = vert0 + ((vert1 - vert0) * (cell - (float)cell0));
             }
         }
 
-        if(z != NO_DATA_VALUE)
+        if(index >= 0)
         {
-            (*va)[i] = vert + shift;;
+            (*va)[ _indices[i] ] = vert + shift;;
         }
 
         cell += step;
@@ -597,16 +666,20 @@ TileNode::ResetEdgeW()
 
     for(int j = 0; j < rows; j++)
     {
-        float z = hf->getHeight(0, j);
-        if(z != NO_DATA_VALUE)
+        int index = _indices[j * cols];
+        if(index >= 0)
         {
-            osg::Vec3d ndc( 0.0, ((double)j)/(double)(rows-1), z);
+            float z = hf->getHeight(0, j);
+            if(z != NO_DATA_VALUE)
+            {
+                osg::Vec3d ndc( 0.0, ((double)j)/(double)(rows-1), z);
 
-            osg::Vec3d model;
-            _model->_tileLocator->unitToModel( ndc, model );
-            osg::Vec3d v = model - getMatrix().getTrans();
+                osg::Vec3d model;
+                _model->_tileLocator->unitToModel( ndc, model );
+                osg::Vec3d v = model - getMatrix().getTrans();
 
-            (*va)[j * cols] = v;
+                (*va)[ index ] = v;
+            }
         }
     }
 
@@ -628,16 +701,20 @@ TileNode::ResetEdgeN()
 
     for(int i = 0; i < cols; i++)
     {
-        float z = hf->getHeight(i, rows - 1);
-        if(z != NO_DATA_VALUE)
+        int index = _indices[(rows - 1) * cols + i];
+        if(index >= 0)
         {
-            osg::Vec3d ndc( ((double)i)/(double)(cols-1), 1.0, z);
+            float z = hf->getHeight(i, rows - 1);
+            if(z != NO_DATA_VALUE)
+            {
+                osg::Vec3d ndc( ((double)i)/(double)(cols-1), 1.0, z);
 
-            osg::Vec3d model;
-            _model->_tileLocator->unitToModel( ndc, model );
-            osg::Vec3d v = model - getMatrix().getTrans();
+                osg::Vec3d model;
+                _model->_tileLocator->unitToModel( ndc, model );
+                osg::Vec3d v = model - getMatrix().getTrans();
 
-            (*va)[(rows - 1) * cols + i] = v;
+                (*va)[ index ] = v;
+            }
         }
     }
 
@@ -659,16 +736,20 @@ TileNode::ResetEdgeE()
 
     for(int j = 0; j < rows; j++)
     {
-        float z = hf->getHeight(cols - 1, j);
-        if(z != NO_DATA_VALUE)
+        int index = _indices[j * cols + (cols - 1)];
+        if(index >= 0)
         {
-            osg::Vec3d ndc( 1.0, ((double)j)/(double)(rows-1), z);
+            float z = hf->getHeight(cols - 1, j);
+            if(z != NO_DATA_VALUE)
+            {
+                osg::Vec3d ndc( 1.0, ((double)j)/(double)(rows-1), z);
 
-            osg::Vec3d model;
-            _model->_tileLocator->unitToModel( ndc, model );
-            osg::Vec3d v = model - getMatrix().getTrans();
+                osg::Vec3d model;
+                _model->_tileLocator->unitToModel( ndc, model );
+                osg::Vec3d v = model - getMatrix().getTrans();
 
-            (*va)[j * cols + (cols - 1)] = v;
+                (*va)[ index ] = v;
+            }
         }
     }
 
@@ -690,16 +771,20 @@ TileNode::ResetEdgeS()
 
     for(int i = 0; i < cols; i++)
     {
-        float z = hf->getHeight(i, 0);
-        if(z != NO_DATA_VALUE)
+        int index = _indices[i];
+        if(index >= 0)
         {
-            osg::Vec3d ndc( ((double)i)/(double)(cols-1), 0.0, z);
+            float z = hf->getHeight(i, 0);
+            if(z != NO_DATA_VALUE)
+            {
+                osg::Vec3d ndc( ((double)i)/(double)(cols-1), 0.0, z);
 
-            osg::Vec3d model;
-            _model->_tileLocator->unitToModel( ndc, model );
-            osg::Vec3d v = model - getMatrix().getTrans();
+                osg::Vec3d model;
+                _model->_tileLocator->unitToModel( ndc, model );
+                osg::Vec3d v = model - getMatrix().getTrans();
 
-            (*va)[i] = v;
+                (*va)[ index ] = v;
+            }
         }
     }
 
