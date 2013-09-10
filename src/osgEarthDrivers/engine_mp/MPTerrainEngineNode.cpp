@@ -864,8 +864,6 @@ MPTerrainEngineNode::traverse( osg::NodeVisitor& nv )
 
         Threading::ScopedWriteLock exclusiveLock( s_tileUpdateMutex );
 
-        std::cout << "\n   Starting to adjust edges \n";
-
         for(it = _tilesToUpdate.begin(); it != _tilesToUpdate.end(); it++)
         {
             (*it)->AdjustEdges();
@@ -943,8 +941,6 @@ MPTerrainEngineNode::MarkBoundingTiles(TileNode* tilenode, Side side, unsigned i
     else if(side == Side_E) tx += 1;
     else if(side == Side_S) ty += 1;
 
-//    std::cout << "    Target tile " << "(" << tx << ", "<< ty << ", " << lod << ")" << "\n";
-
     // Figure out which of the LOD0 tiles contains the target
     unsigned int lod0TileX = tx / tilesPerLod0Tile;
     unsigned int lod0TileY = ty / tilesPerLod0Tile;
@@ -952,8 +948,6 @@ MPTerrainEngineNode::MarkBoundingTiles(TileNode* tilenode, Side side, unsigned i
     // Calcualte the offset relative to the LOD0 tile
     tx = tx - (lod0TileX * tilesPerLod0Tile);
     ty = ty - (lod0TileY * tilesPerLod0Tile);
-
-//    std::cout << "          Target tile located in root tile " << lod0TileX << ", " << lod0TileY << " at offset " << tx << ", " << ty << "\n";
 
     //Set up a vector to hold bounding tilenodes
     std::vector< TileNode* > tnv;
