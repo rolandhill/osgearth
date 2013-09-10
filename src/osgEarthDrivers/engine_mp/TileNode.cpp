@@ -213,8 +213,6 @@ TileNode::AdjustEdges()
 {
     osg::Vec3d center = getMatrix().getTrans();
 
-    std::cout << " --------- New Tile\n";
-
     // Check each boundary to see if an adjustment is required
     if(_boundTileW_pending.valid()) AdjustEdgeW(center);
     if(_boundTileN_pending.valid()) AdjustEdgeN(center);
@@ -229,12 +227,10 @@ TileNode::AdjustEdgeW(osg::Vec3d center)
 
     const TileKey& key = getTileModel()->_tileKey;
     unsigned int lod = key.getLOD();
-//    unsigned int x = key.getTileX();
     unsigned int y = key.getTileY();
 
     const TileKey& bkey = _boundTileW_pending->getTileModel()->_tileKey;
     unsigned int blod = bkey.getLOD();
-//    unsigned int bx = bkey.getTileX();
     unsigned int by = bkey.getTileY();
 
     // Get the vertex array to adjust
@@ -253,13 +249,11 @@ TileNode::AdjustEdgeW(osg::Vec3d center)
 
     double step = 1.0;
     unsigned int mult = 1;
-//    unsigned int equivx = bx;
     unsigned int equivy = by;
     for(int i = blod; i < lod; i++)
     {
         step = step * 0.5;
         mult *= 2;
-//        equivx *= 2;
         equivy *= 2;
     }
 
@@ -300,7 +294,7 @@ TileNode::AdjustEdgeW(osg::Vec3d center)
             {
                 osg::Vec3 vert0 = (*bva)[cell0 * bcols + bcols - 1];
                 osg::Vec3 vert1 = (*bva)[(cell0 + 1) * bcols + bcols - 1];
-                vert = vert0 + ((vert1 - vert0) * (cell - (double)cell0));
+                vert = vert0 + ((vert1 - vert0) * (cell - (float)cell0));
             }
         }
 
@@ -326,12 +320,10 @@ TileNode::AdjustEdgeN(osg::Vec3d center)
     const TileKey& key = getTileModel()->_tileKey;
     unsigned int lod = key.getLOD();
     unsigned int x = key.getTileX();
-//    unsigned int y = key.getTileY();
 
     const TileKey& bkey = _boundTileN_pending->getTileModel()->_tileKey;
     unsigned int blod = bkey.getLOD();
     unsigned int bx = bkey.getTileX();
-//    unsigned int by = bkey.getTileY();
 
     // Get the vertex array to adjust
     osg::Vec3Array* va = getVertexArray();
@@ -350,12 +342,10 @@ TileNode::AdjustEdgeN(osg::Vec3d center)
     double step = 1.0;
     unsigned int equivx = bx;
     unsigned int mult = 1;
-//    unsigned int equivy = by;
     for(int i = blod; i < lod; i++)
     {
         step = step * 0.5;
         mult *= 2;
-//        equivx *= 2;
         equivx *= 2;
     }
 
@@ -395,7 +385,7 @@ TileNode::AdjustEdgeN(osg::Vec3d center)
             {
                 osg::Vec3 vert0 = (*bva)[cell0];
                 osg::Vec3 vert1 = (*bva)[cell0 + 1];
-                vert = vert0 + ((vert1 - vert0) * (cell - (double)cell0));
+                vert = vert0 + ((vert1 - vert0) * (cell - (float)cell0));
             }
         }
 
@@ -420,12 +410,10 @@ TileNode::AdjustEdgeE(osg::Vec3d center)
 
     const TileKey& key = getTileModel()->_tileKey;
     unsigned int lod = key.getLOD();
-//    unsigned int x = key.getTileX();
     unsigned int y = key.getTileY();
 
     const TileKey& bkey = _boundTileE_pending->getTileModel()->_tileKey;
     unsigned int blod = bkey.getLOD();
-//    unsigned int bx = bkey.getTileX();
     unsigned int by = bkey.getTileY();
 
     // Get the vertex array to adjust
@@ -444,13 +432,11 @@ TileNode::AdjustEdgeE(osg::Vec3d center)
 
     double step = 1.0;
     unsigned int mult = 1;
-//    unsigned int equivx = bx;
     unsigned int equivy = by;
     for(int i = blod; i < lod; i++)
     {
         step = step * 0.5;
         mult *= 2;
-//        equivx *= 2;
         equivy *= 2;
     }
 
@@ -458,10 +444,6 @@ TileNode::AdjustEdgeE(osg::Vec3d center)
     int tilesfromtop = y - equivy;
     int tilesfrombottom = mult - tilesfromtop - 1;
     int start = (float)tilesfrombottom * step * (float)brows + 0.1;
-//    int start = (y - equivy) / mult * brows;
-
-    // Flip the start point over as Tiles are +ve down and HeightField is +ve up;
-//    start = brows - ((int)((float)brows * step + 0.1f)) - start;
 
     double cell = start;
 
@@ -473,7 +455,7 @@ TileNode::AdjustEdgeE(osg::Vec3d center)
         // Get the lower coordinate
         int cell0 = cell + 0.001;
 
-        float z =0.0;
+        float z = 0.0;
         osg::Vec3 vert;
 
         if(fabs(cell0 - cell) < 0.0001 || cell0 == brows - 1)
@@ -495,7 +477,7 @@ TileNode::AdjustEdgeE(osg::Vec3d center)
             {
                 osg::Vec3 vert0 = (*bva)[cell0 * bcols];
                 osg::Vec3 vert1 = (*bva)[(cell0 + 1) * bcols];
-                vert = vert0 + ((vert1 - vert0) * (cell - (double)cell0));
+                vert = vert0 + ((vert1 - vert0) * (cell - (float)cell0));
             }
         }
 
@@ -521,12 +503,10 @@ TileNode::AdjustEdgeS(osg::Vec3d center)
     const TileKey& key = getTileModel()->_tileKey;
     unsigned int lod = key.getLOD();
     unsigned int x = key.getTileX();
-//    unsigned int y = key.getTileY();
 
     const TileKey& bkey = _boundTileS_pending->getTileModel()->_tileKey;
     unsigned int blod = bkey.getLOD();
     unsigned int bx = bkey.getTileX();
-//    unsigned int by = bkey.getTileY();
 
     // Get the vertex array to adjust
     osg::Vec3Array* va = getVertexArray();
@@ -545,17 +525,15 @@ TileNode::AdjustEdgeS(osg::Vec3d center)
     double step = 1.0;
     unsigned int equivx = bx;
     unsigned int mult = 1;
-//    unsigned int equivy = by;
     for(int i = blod; i < lod; i++)
     {
         step = step * 0.5;
         mult *= 2;
         equivx *= 2;
-//        equivy *= 2;
     }
 
     // Figure out the start coordinate in cells of the start of this tile, within the boundary tile
-    int start = ((float)(x - equivx)) *step * (float)bcols + 0.1;
+    int start = ((float)(x - equivx)) * step * (float)bcols + 0.1;
 
     double cell = start;
 
@@ -567,7 +545,7 @@ TileNode::AdjustEdgeS(osg::Vec3d center)
         // Get the lower coordinate
         int cell0 = cell + 0.001;
 
-        float z =0.0;
+        float z = 0.0;
         osg::Vec3 vert;
 
         if(fabs(cell0 - cell) < 0.0001 || cell0 == brows - 1)
@@ -589,7 +567,7 @@ TileNode::AdjustEdgeS(osg::Vec3d center)
             {
                 osg::Vec3 vert0 = (*bva)[(brows - 1) * bcols + cell0];
                 osg::Vec3 vert1 = (*bva)[(brows - 1) * bcols + cell0 + 1];
-                vert = vert0 + ((vert1 - vert0) * (cell - (double)cell0));
+                vert = vert0 + ((vert1 - vert0) * (cell - (float)cell0));
             }
         }
 
