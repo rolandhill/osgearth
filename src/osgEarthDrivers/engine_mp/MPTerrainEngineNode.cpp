@@ -944,7 +944,12 @@ MPTerrainEngineNode::traverse( osg::NodeVisitor& nv )
 
         for(it = _tilesToUpdate.begin(); it != _tilesToUpdate.end(); it++)
         {
-            (*it)->AdjustEdges();
+            (*it)->AdjustEdges(true);
+        }
+
+        for(it = _tilesToUpdate.begin(); it != _tilesToUpdate.end(); it++)
+        {
+            (*it)->AdjustEdges(false);
         }
 
         _tilesToUpdate.clear();

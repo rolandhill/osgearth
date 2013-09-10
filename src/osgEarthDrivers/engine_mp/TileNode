@@ -106,8 +106,15 @@ namespace osgEarth_engine_mp
 		void setBoundTileE(TileNode* tilenode) { _boundTileE_pending = tilenode; }
 		void setBoundTileS(TileNode* tilenode) { _boundTileS_pending = tilenode; }
 
-		void AdjustEdges();
+		TileNode* getBoundTileW() { return _boundTileW; }
+		TileNode* getBoundTileN() { return _boundTileN; }
+		TileNode* getBoundTileE() { return _boundTileE; }
+		TileNode* getBoundTileS() { return _boundTileS; }
+
+		void AdjustEdges(bool sameLod);
 		void CheckOrphanedBoundaries();
+
+		std::vector< short >& getIndices() { return _indices; }
 
     public: // OVERRIDES
 
@@ -154,6 +161,8 @@ namespace osgEarth_engine_mp
         osg::ref_ptr<TileNode>             _boundTileN_pending;
         osg::ref_ptr<TileNode>             _boundTileE_pending;
         osg::ref_ptr<TileNode>             _boundTileS_pending;
+
+        std::vector< short >               _indices;
     };
 
 
