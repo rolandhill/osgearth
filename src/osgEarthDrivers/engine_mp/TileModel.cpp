@@ -62,7 +62,8 @@ TileModel::ElevationData::getHeight(const osg::Vec3d&      ndc,
     osg::Vec3d hf_ndc;
     GeoLocator::convertLocalCoordBetween( *ndcLocator, ndc, *_locator.get(), hf_ndc );
     output = HeightFieldUtils::getHeightAtNormalizedLocation( _hf.get(), hf_ndc.x(), hf_ndc.y(), interp );
-    return true;
+
+    return (output != NO_DATA_VALUE);
 }
 
 bool

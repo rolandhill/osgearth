@@ -76,6 +76,7 @@ namespace osgEarth_engine_mp
         void setLastTraversalFrame(unsigned frame);
 
         /**
+<<<<<<< HEAD
          * Tells the tile node the current map revision, which is turn
          * will determine whether the tile is dirty and needs updating.
          */
@@ -97,23 +98,58 @@ namespace osgEarth_engine_mp
 
         TileNode* getTileNode() { return this; }
 
+=======
+        * Sets the TerrainEngineNode so we can access it later
+        */
+>>>>>>> FIX: vertex spikes.
 		void setTerrainEngineNode(MPTerrainEngineNode* mpt) { _terrainEngineNode = mpt; }
+
+        /**
+        * Reset flag to indicate that tile was not used on the last frame and reset pending boundary tile pointers.
+        */
 		void resetUsedLastFrameFlag();
+
+        /**
+        * Return whether this tile was used in the display on the last frame.
+        */
 		bool getUsedLastFrame() { return _usedLastFrame; }
 
+
+        /**
+        * Set the bounding tiles. These will be 'pending' until AdjustEdges is called
+        */
 		void setBoundTileW(TileNode* tilenode) { _boundTileW_pending = tilenode; }
 		void setBoundTileN(TileNode* tilenode) { _boundTileN_pending = tilenode; }
 		void setBoundTileE(TileNode* tilenode) { _boundTileE_pending = tilenode; }
 		void setBoundTileS(TileNode* tilenode) { _boundTileS_pending = tilenode; }
 
+
+        /**
+        * Return the bounding tiles if they have been set.
+        */
 		TileNode* getBoundTileW() { return _boundTileW; }
 		TileNode* getBoundTileN() { return _boundTileN; }
 		TileNode* getBoundTileE() { return _boundTileE; }
 		TileNode* getBoundTileS() { return _boundTileS; }
 
+
+        /**
+        * Adjust all the edges to match the boundary tiles as set by the _boundTile?_pending members.
+        * Two modes exist:
+        *   1) Only adjust tiles with a boundary at the same LOD
+        *   2) Only adjust tiles with a boundary at a different LOD
+        */
 		void AdjustEdges(bool sameLod);
+
+        /**
+        * Check if boundary tiles are still being used in the display and reset any edge adjustments if they are not.
+        */
 		void CheckOrphanedBoundaries();
 
+
+        /**
+        * Get a reference to the array that matches X & Y in the HeightField to an index in the vertex array
+        */
 		std::vector< short >& getIndices() { return _indices; }
 
     public: // OVERRIDES
