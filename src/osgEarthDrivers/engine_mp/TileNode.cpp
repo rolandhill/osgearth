@@ -58,6 +58,7 @@ _lastTraversalFrame( 0 )
     _usedLastFrame = false;
     _terrainEngineNode = 0L;
 
+    // If we have a valid model then reserve space in the index array
     if(_model)
     {
         osg::HeightField* hf  = _model->_elevationData.getHeightField();
@@ -98,13 +99,9 @@ TileNode::computeBound() const
 void
 TileNode::traverse( osg::NodeVisitor& nv )
 {
-//        CheckOrphanedBoundaries();
-
     // TODO: not sure we need this.
     if ( nv.getVisitorType() == nv.CULL_VISITOR )
     {
-//        CheckOrphanedBoundaries();
-
         osg::ClusterCullingCallback* ccc = dynamic_cast<osg::ClusterCullingCallback*>(getCullCallback());
         if (ccc)
         {
@@ -134,9 +131,8 @@ TileNode::traverse( osg::NodeVisitor& nv )
             if(isValid()) _terrainEngineNode->RegisterChangedTileNode(this, MPTerrainEngineNode::Side_All);
         }
 
+        // Flag that this tile is being used
         _usedLastFrame = true;
-
-//        getVertexArray()->dirty();
     }
 
     if(getVertexArray()) getVertexArray()->dirty();
@@ -154,14 +150,10 @@ TileNode::releaseGLObjects(osg::State* state) const
 void
 TileNode::resetUsedLastFrameFlag()
 {
+    // Flag that this tile is not being used
     _usedLastFrame = false;
 
-    //Clear all boudary node data
-//    _boundTileW = 0L;
-//    _boundTileN = 0L;
-//    _boundTileE = 0L;
-//    _boundTileS = 0L;
-
+    // Reset pending operations
     _boundTileW_pending = 0L;
     _boundTileN_pending = 0L;
     _boundTileE_pending = 0L;
@@ -194,7 +186,7 @@ TileNode::getVertexArray()
 
 void TileNode::CheckOrphanedBoundaries()
 {
-    //Check if the boundry tiles are still active. If not, then remove any adjustments
+    //Check if the boundry tiles are still being used in display. If not, then remove any adjustments that may have been made
     if(_boundTileW.valid() && !_boundTileW->getUsedLastFrame())
     {
         ResetEdgeW();
@@ -343,36 +335,41 @@ TileNode::AdjustEdgeW(osg::Vec3d center)
     // Loop through this tiles boundary heights
     for(int j = 0; j < rows; j++)
     {
-        // Get the lower coordinate
-        int cell0 = cell + 0.001;
-
-        osg::Vec3 vert;
-        int index = bindices[cell0 * bcols + bcols - 1];
-
-        if(fabs(cell0 - cell) < 0.001 || cell0 == brows - 1)
+        int index = _indices[j * cols];
+        if(index >= 0)
         {
-            if(index >= 0) vert = (*bva)[ index ];
-        }
-        else
-        {
-            // get the boundary height at each coordinate then interpolate
-            int index1 = bindices[(cell0 + 1) * bcols + bcols - 1];
+            // Get the lower coordinate
+            int cell0 = cell + 0.001;
 
-            if(index < 0 || index1 < 0)
+            osg::Vec3 vert;
+            int bindex = bindices[cell0 * bcols + bcols - 1];
+
+            if(fabs(cell0 - cell) < 0.001 || cell0 == brows - 1)
             {
-                index = -1;
+                if(bindex >= 0) vert = (*bva)[ bindex ];
             }
             else
             {
-                osg::Vec3 vert0 = (*bva)[ index ];
-                osg::Vec3 vert1 = (*bva)[ index1 ];
-                vert = vert0 + ((vert1 - vert0) * (cell - (float)cell0));
-            }
-        }
+                // get the vertex at each coordinate then interpolate
+                int bindex1 = bindices[(cell0 + 1) * bcols + bcols - 1];
 
-        if(index >= 0)
-        {
-            (*va)[ _indices[j * cols] ] = vert + shift;
+                if(bindex < 0 || bindex1 < 0)
+                {
+                    bindex = -1;
+                }
+                else
+                {
+                    osg::Vec3 vert0 = (*bva)[ bindex ];
+                    osg::Vec3 vert1 = (*bva)[ bindex1 ];
+                    vert = vert0 + ((vert1 - vert0) * (cell - (float)cell0));
+                }
+            }
+
+            if(bindex >= 0)
+            {
+                (*va)[ index ] = vert + shift;
+            }
+
         }
 
         cell += step;
@@ -432,36 +429,40 @@ TileNode::AdjustEdgeN(osg::Vec3d center)
     // Loop through this tiles boundary heights
     for(int i = 0; i < cols; i++)
     {
-        // Get the lower coordinate
-        int cell0 = cell + 0.001;
-
-        osg::Vec3 vert;
-        int index = bindices[cell0];
-
-        if(fabs(cell0 - cell) < 0.0001 || cell0 == bcols - 1)
+        int index = _indices[(rows - 1) * cols + i];
+        if(index >= 0)
         {
-            if(index >= 0) vert = (*bva)[ index ];
-        }
-        else
-        {
-            // get the boundary height at each coordinate then interpolate
-            int index1 = bindices[cell0 + 1];
+            // Get the lower coordinate
+            int cell0 = cell + 0.001;
 
-            if(index < 0 || index1 < 0)
+            osg::Vec3 vert;
+            int bindex = bindices[cell0];
+
+            if(fabs(cell0 - cell) < 0.0001 || cell0 == bcols - 1)
             {
-                index = -1;
+                if(bindex >= 0) vert = (*bva)[ bindex ];
             }
             else
             {
-                osg::Vec3 vert0 = (*bva)[ index ];
-                osg::Vec3 vert1 = (*bva)[ index1 ];
-                vert = vert0 + ((vert1 - vert0) * (cell - (float)cell0));
-            }
-        }
+                // get the boundary height at each coordinate then interpolate
+                int bindex1 = bindices[cell0 + 1];
 
-        if(index >= 0)
-        {
-            (*va)[ _indices[(rows - 1) * cols + i] ] = vert + shift;;
+                if(bindex < 0 || bindex1 < 0)
+                {
+                    bindex = -1;
+                }
+                else
+                {
+                    osg::Vec3 vert0 = (*bva)[ bindex ];
+                    osg::Vec3 vert1 = (*bva)[ bindex1 ];
+                    vert = vert0 + ((vert1 - vert0) * (cell - (float)cell0));
+                }
+            }
+
+            if(bindex >= 0)
+            {
+                (*va)[ index ] = vert + shift;;
+            }
         }
 
         cell += step;
@@ -524,36 +525,40 @@ TileNode::AdjustEdgeE(osg::Vec3d center)
     // Loop through this tiles boundary heights
     for(int j = 0; j < rows; j++)
     {
-        // Get the lower coordinate
-        int cell0 = cell + 0.001;
-
-        osg::Vec3 vert;
-        int index = bindices[cell0 * bcols];
-
-        if(fabs(cell0 - cell) < 0.0001 || cell0 == brows - 1)
+        int index = _indices[j * cols + (cols - 1)];
+        if(index >= 0)
         {
-            if(index >= 0) vert = (*bva)[ index ];
-        }
-        else
-        {
-            // get the boundary height at each coordinate then interpolate
-            int index1 = bindices[(cell0 + 1) * bcols];
+            // Get the lower coordinate
+            int cell0 = cell + 0.001;
 
-            if(index < 0 || index1 < 0)
+            osg::Vec3 vert;
+            int bindex = bindices[cell0 * bcols];
+
+            if(fabs(cell0 - cell) < 0.0001 || cell0 == brows - 1)
             {
-                index = -1;
+                if(bindex >= 0) vert = (*bva)[ bindex ];
             }
             else
             {
-                osg::Vec3 vert0 = (*bva)[ index ];
-                osg::Vec3 vert1 = (*bva)[ index1 ];
-                vert = vert0 + ((vert1 - vert0) * (cell - (float)cell0));
-            }
-        }
+                // get the boundary height at each coordinate then interpolate
+                int bindex1 = bindices[(cell0 + 1) * bcols];
 
-        if(index >= 0)
-        {
-            (*va)[ _indices[j * cols + (cols - 1)] ] = vert + shift;;
+                if(bindex < 0 || bindex1 < 0)
+                {
+                    bindex = -1;
+                }
+                else
+                {
+                    osg::Vec3 vert0 = (*bva)[ bindex ];
+                    osg::Vec3 vert1 = (*bva)[ bindex1 ];
+                    vert = vert0 + ((vert1 - vert0) * (cell - (float)cell0));
+                }
+            }
+
+            if(bindex >= 0)
+            {
+                (*va)[ index ] = vert + shift;;
+            }
         }
 
         cell += step;
@@ -612,36 +617,40 @@ TileNode::AdjustEdgeS(osg::Vec3d center)
     // Loop through this tiles boundary heights
     for(int i = 0; i < cols; i++)
     {
-        // Get the lower coordinate
-        int cell0 = cell + 0.001;
-
-        osg::Vec3 vert;
-        int index = bindices[(brows - 1) * bcols + cell0];
-
-        if(fabs(cell0 - cell) < 0.0001 || cell0 == bcols - 1)
+        int index = _indices[i];
+        if(index >= 0)
         {
-            if(index >= 0) vert = (*bva)[ index ];
-        }
-        else
-        {
-            // get the boundary height at each coordinate then interpolate
-            int index1 = bindices[(brows - 1) * bcols + cell0 + 1];
+            // Get the lower coordinate
+            int cell0 = cell + 0.001;
 
-            if(index < 0 || index1 < 0)
+            osg::Vec3 vert;
+            int bindex = bindices[(brows - 1) * bcols + cell0];
+
+            if(fabs(cell0 - cell) < 0.0001 || cell0 == bcols - 1)
             {
-                index = -1;
+                if(bindex >= 0) vert = (*bva)[ bindex ];
             }
             else
             {
-                osg::Vec3 vert0 = (*bva)[ index ];
-                osg::Vec3 vert1 = (*bva)[ index1 ];
-                vert = vert0 + ((vert1 - vert0) * (cell - (float)cell0));
-            }
-        }
+                // get the boundary height at each coordinate then interpolate
+                int bindex1 = bindices[(brows - 1) * bcols + cell0 + 1];
 
-        if(index >= 0)
-        {
-            (*va)[ _indices[i] ] = vert + shift;;
+                if(bindex < 0 || bindex1 < 0)
+                {
+                    bindex = -1;
+                }
+                else
+                {
+                    osg::Vec3 vert0 = (*bva)[ bindex ];
+                    osg::Vec3 vert1 = (*bva)[ bindex1 ];
+                    vert = vert0 + ((vert1 - vert0) * (cell - (float)cell0));
+                }
+            }
+
+            if(bindex >= 0)
+            {
+                (*va)[ index ] = vert + shift;;
+            }
         }
 
         cell += step;
