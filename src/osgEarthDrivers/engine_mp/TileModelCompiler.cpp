@@ -148,7 +148,7 @@ namespace
         osg::Vec3d               centerModel;                   // tile center in model (world) coords
 
         RenderLayerVector        renderLayers;
-        osg::Vec2Array*          renderTileCoords;
+        osg::ref_ptr<osg::Vec2Array>          renderTileCoords;
         bool                     ownsTileCoords;
 
         // surface data:
@@ -369,7 +369,8 @@ namespace
         idmat[2] = 1.0;
         idmat[3] = 1.0;
 
-        osg::ref_ptr<osg::Vec2Array>& tileCoords = cache._surfaceTexCoordArrays.get( idmat, d.numCols, d.numRows );
+        osg::ref_ptr<osg::Vec2Array> tileCoords;
+//        osg::ref_ptr<osg::Vec2Array>& tileCoords = cache._surfaceTexCoordArrays.get( idmat, d.numCols, d.numRows );
         if ( !tileCoords.valid() )
         {
             // Note: anything in the cache must have its own VBO. No sharing!
@@ -406,7 +407,8 @@ namespace
                     //OE_DEBUG << "key=" << d.model->_tileKey.str() << ": off=[" <<mat[0]<< ", " <<mat[1] << "] scale=["
                     //    << mat[2]<< ", " << mat[3] << "]" << std::endl;
 
-                    osg::ref_ptr<osg::Vec2Array>& surfaceTexCoords = cache._surfaceTexCoordArrays.get( mat, d.numCols, d.numRows );
+                    osg::ref_ptr<osg::Vec2Array> surfaceTexCoords;
+//                    osg::ref_ptr<osg::Vec2Array>& surfaceTexCoords = cache._surfaceTexCoordArrays.get( mat, d.numCols, d.numRows );
                     if ( !surfaceTexCoords.valid() )
                     {
                         // Note: anything in the cache must have its own VBO. No sharing!
@@ -648,6 +650,21 @@ namespace
                         oldNormal.z(),
                         oldHeightValue ) );
                 }
+            }
+        }
+
+        // Trim some arrays
+        d.surfaceVerts->trim();
+        d.renderTileCoords->trim();
+        d.normals->trim();
+        d.surfaceAttribs->trim();
+        d.surfaceAttribs2->trim();
+
+        for( RenderLayerVector::const_iterator r = d.renderLayers.begin(); r != d.renderLayers.end(); ++r )
+        {
+            if ( r->_ownsTexCoords )
+            {
+                r->_texCoords->trim();
             }
         }
 
@@ -1324,8 +1341,6 @@ namespace
                         float e01 = (*d.elevations)[i01];
                         float e11 = (*d.elevations)[i11];
 
-                        if(e00 == NO_DATA_VALUE || e10 == NO_DATA_VALUE || e01 == NO_DATA_VALUE || e11 == NO_DATA_VALUE ) continue;
-
                         osg::Vec3f& v00 = (*d.surfaceVerts)[i00];
                         osg::Vec3f& v10 = (*d.surfaceVerts)[i10];
                         osg::Vec3f& v01 = (*d.surfaceVerts)[i01];
@@ -1464,8 +1479,6 @@ namespace
                         float e10 = boundaryElevations[baseIndex + 1];
                         float e01 = boundaryElevations[baseIndex + 2];
                         float e11 = boundaryElevations[baseIndex + 3];
-
-                        if(e00 == NO_DATA_VALUE || e10 == NO_DATA_VALUE || e01 == NO_DATA_VALUE || e11 == NO_DATA_VALUE ) continue;
 
                         if (!optimizeTriangleOrientation || fabsf(e00-e11)<fabsf(e01-e10))
                         {
@@ -1639,8 +1652,6 @@ namespace
                         float e01 = boundaryElevations[baseIndex + d.numCols];
                         float e11 = boundaryElevations[baseIndex + d.numCols + 1];
 
-                        if(e00 == NO_DATA_VALUE || e10 == NO_DATA_VALUE || e01 == NO_DATA_VALUE || e11 == NO_DATA_VALUE ) continue;
-
                         if (!optimizeTriangleOrientation || fabsf(e00-e11)<fabsf(e01-e10))
                         {
                             osg::Vec3 normal1 = (v00-v01) ^ (v11-v01);
@@ -1727,8 +1738,6 @@ namespace
                         float e10 = boundaryElevations[baseIndex + 1];
                         float e01 = boundaryElevations[baseIndex + d.numCols];
                         float e11 = boundaryElevations[baseIndex + d.numCols + 1];
-
-                        if(e00 == NO_DATA_VALUE || e10 == NO_DATA_VALUE || e01 == NO_DATA_VALUE || e11 == NO_DATA_VALUE ) continue;
 
                         if (!optimizeTriangleOrientation || fabsf(e00-e11)<fabsf(e01-e10))
                         {
