@@ -1968,5 +1968,13 @@ TileModelCompiler::compile(const TileModel* model)
         tile->accept(*builder);
     }
 
+    // Store the index data in the TileNode so we can match HeightField X & Y to its corresponding vertex
+    std::vector< short >& indices = tile->getIndices();
+    Indices::iterator iit;
+    for(iit = d.indices.begin(); iit != d.indices.end(); iit++)
+    {
+        indices.push_back((short) *iit);
+    }
+
     return tile;
 }

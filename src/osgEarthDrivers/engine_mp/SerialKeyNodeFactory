@@ -32,6 +32,8 @@ using namespace osgEarth::Drivers;
 
 namespace osgEarth_engine_mp
 {
+    class MPTerrainEngineNode;
+
     class SerialKeyNodeFactory : public KeyNodeFactory
     {
     public:
@@ -56,6 +58,8 @@ namespace osgEarth_engine_mp
         osg::Node* createNode( const TileKey& key, ProgressCallback* progress );
 
         TileModelCompiler* getCompiler() const { return _modelCompiler.get(); }
+
+        void setTerrainEngineNode( MPTerrainEngineNode* ten) { _terrainEngineNode = ten; }
 
     protected:
         osg::Node* createTile(TileModel* model, bool tileHasRealData);

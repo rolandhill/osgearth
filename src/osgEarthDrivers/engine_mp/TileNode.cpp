@@ -18,6 +18,7 @@
 */
 #include "TileNode"
 #include "MPTerrainEngineNode"
+#include "MPGeometry"
 
 #include <osg/ClusterCullingCallback>
 #include <osg/NodeCallback>
@@ -55,6 +56,17 @@ _lastTraversalFrame( 0 )
     stateset->addUniform( _bornUniform );
 
     _usedLastFrame = false;
+    _terrainEngineNode = 0L;
+
+    // If we have a valid model then reserve space in the index array
+    if(_model)
+    {
+        osg::HeightField* hf  = _model->_elevationData.getHeightField();
+        int rows = hf->getNumRows();
+        int cols = hf->getNumColumns();
+
+        _indices.reserve(rows * cols);
+    }
 }
 
 
@@ -116,11 +128,14 @@ TileNode::traverse( osg::NodeVisitor& nv )
         // We therefore notify the TerrainEngineNode if it is being turned on from off.
         if(!_usedLastFrame)
         {
-            _terrainEngineNode->RegisterChangedTileNode(this, MPTerrainEngineNode::Invalid_All);
+            if(isValid()) _terrainEngineNode->RegisterChangedTileNode(this, MPTerrainEngineNode::Side_All);
         }
+
+        // Flag that this tile is being used
         _usedLastFrame = true;
     }
 
+    if(getVertexArray()) getVertexArray()->dirty();
     osg::MatrixTransform::traverse( nv );
 }
 
