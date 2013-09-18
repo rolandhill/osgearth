@@ -76,7 +76,6 @@ namespace osgEarth_engine_mp
         void setLastTraversalFrame(unsigned frame);
 
         /**
-<<<<<<< HEAD
          * Tells the tile node the current map revision, which is turn
          * will determine whether the tile is dirty and needs updating.
          */
@@ -98,10 +97,9 @@ namespace osgEarth_engine_mp
 
         TileNode* getTileNode() { return this; }
 
-=======
+        /**
         * Sets the TerrainEngineNode so we can access it later
         */
->>>>>>> FIX: vertex spikes.
 		void setTerrainEngineNode(MPTerrainEngineNode* mpt) { _terrainEngineNode = mpt; }
 
         /**

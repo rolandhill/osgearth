@@ -86,10 +86,6 @@ TileNode::setLastTraversalFrame(unsigned frame)
 void
 TileNode::traverse( osg::NodeVisitor& nv )
 {
-<<<<<<< HEAD
-=======
-    // TODO: not sure we need this.
->>>>>>> FIX: vertex spikes.
     if ( nv.getVisitorType() == nv.CULL_VISITOR )
     {
         osg::ClusterCullingCallback* ccc = dynamic_cast<osg::ClusterCullingCallback*>(getCullCallback());
@@ -686,18 +682,6 @@ TileNode::ResetEdgeW()
         if(index >= 0)
         {
             float z = hf->getHeight(0, j);
-<<<<<<< HEAD
-            if(z != NO_DATA_VALUE)
-            {
-                osg::Vec3d ndc( 0.0, ((double)j)/(double)(rows-1), z);
-
-                osg::Vec3d model;
-                _model->_tileLocator->unitToModel( ndc, model );
-                osg::Vec3d v = model - getMatrix().getTrans();
-
-                (*va)[ index ] = v;
-            }
-=======
             osg::Vec3d ndc( 0.0, ((double)j)/(double)(rows-1), z);
 
             osg::Vec3d model;
@@ -705,7 +689,6 @@ TileNode::ResetEdgeW()
             osg::Vec3d v = model - getMatrix().getTrans();
 
             (*va)[ index ] = v;
->>>>>>> Remove texture coord cache.
         }
     }
 
@@ -731,18 +714,6 @@ TileNode::ResetEdgeN()
         if(index >= 0)
         {
             float z = hf->getHeight(i, rows - 1);
-<<<<<<< HEAD
-            if(z != NO_DATA_VALUE)
-            {
-                osg::Vec3d ndc( ((double)i)/(double)(cols-1), 1.0, z);
-
-                osg::Vec3d model;
-                _model->_tileLocator->unitToModel( ndc, model );
-                osg::Vec3d v = model - getMatrix().getTrans();
-
-                (*va)[ index ] = v;
-            }
-=======
             osg::Vec3d ndc( ((double)i)/(double)(cols-1), 1.0, z);
 
             osg::Vec3d model;
@@ -750,7 +721,6 @@ TileNode::ResetEdgeN()
             osg::Vec3d v = model - getMatrix().getTrans();
 
             (*va)[ index ] = v;
->>>>>>> Remove texture coord cache.
         }
     }
 
@@ -776,18 +746,6 @@ TileNode::ResetEdgeE()
         if(index >= 0)
         {
             float z = hf->getHeight(cols - 1, j);
-<<<<<<< HEAD
-            if(z != NO_DATA_VALUE)
-            {
-                osg::Vec3d ndc( 1.0, ((double)j)/(double)(rows-1), z);
-
-                osg::Vec3d model;
-                _model->_tileLocator->unitToModel( ndc, model );
-                osg::Vec3d v = model - getMatrix().getTrans();
-
-                (*va)[ index ] = v;
-            }
-=======
             osg::Vec3d ndc( 1.0, ((double)j)/(double)(rows-1), z);
 
             osg::Vec3d model;
@@ -795,7 +753,6 @@ TileNode::ResetEdgeE()
             osg::Vec3d v = model - getMatrix().getTrans();
 
             (*va)[ index ] = v;
->>>>>>> Remove texture coord cache.
         }
     }
 
@@ -821,18 +778,6 @@ TileNode::ResetEdgeS()
         if(index >= 0)
         {
             float z = hf->getHeight(i, 0);
-<<<<<<< HEAD
-            if(z != NO_DATA_VALUE)
-            {
-                osg::Vec3d ndc( ((double)i)/(double)(cols-1), 0.0, z);
-
-                osg::Vec3d model;
-                _model->_tileLocator->unitToModel( ndc, model );
-                osg::Vec3d v = model - getMatrix().getTrans();
-
-                (*va)[ index ] = v;
-            }
-=======
             osg::Vec3d ndc( ((double)i)/(double)(cols-1), 0.0, z);
 
             osg::Vec3d model;
@@ -840,7 +785,6 @@ TileNode::ResetEdgeS()
             osg::Vec3d v = model - getMatrix().getTrans();
 
             (*va)[ index ] = v;
->>>>>>> Remove texture coord cache.
         }
     }
 
@@ -848,7 +792,4 @@ TileNode::ResetEdgeS()
 
     _boundTileS = 0L;
 }
-<<<<<<< HEAD
 
-=======
->>>>>>> Remove texture coord cache.
