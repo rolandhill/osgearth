@@ -388,6 +388,8 @@ MPTerrainEngineNode::createTerrain()
     updateShaders();
 }
 
+static Threading::ReadWriteMutex s_changedTileMutex;
+static Threading::ReadWriteMutex s_tileUpdateMutex;
 
 void
 MPTerrainEngineNode::traverse(osg::NodeVisitor& nv)
@@ -419,7 +421,32 @@ MPTerrainEngineNode::traverse(osg::NodeVisitor& nv)
         OE_NOTICE << LC << "Live tiles = " << _liveTiles->size() << std::endl;
 #endif
 
+    _changedTiles.clear();
+
     TerrainEngineNode::traverse( nv );
+
+    if ( nv.getVisitorType() == nv.CULL_VISITOR )
+    {
+        _tilesToUpdate.clear();
+
+        BuildTileUpdateVec();
+
+        std::vector< osg::ref_ptr<TileNode> >::iterator it;
+
+        Threading::ScopedWriteLock exclusiveLock( s_tileUpdateMutex );
+
+        for(it = _tilesToUpdate.begin(); it != _tilesToUpdate.end(); it++)
+        {
+            (*it)->AdjustEdges(true);
+        }
+
+        for(it = _tilesToUpdate.begin(); it != _tilesToUpdate.end(); it++)
+        {
+            (*it)->AdjustEdges(false);
+        }
+
+        _tilesToUpdate.clear();
+    }
 }
 
 
@@ -913,49 +940,6 @@ MPTerrainEngineNode::updateShaders()
             "oe_layer_order", osg::Uniform::INT )->set( 0 );
 
         _shaderUpdateRequired = false;
-    }
-}
-
-static Threading::ReadWriteMutex s_changedTileMutex;
-static Threading::ReadWriteMutex s_tileUpdateMutex;
-
-void
-MPTerrainEngineNode::traverse( osg::NodeVisitor& nv )
-{
-//    if ( nv.getVisitorType() == nv.CULL_VISITOR )
-//    {
-//        Threading::ScopedWriteLock exclusiveLock( s_changedTileMutex );
-        _changedTiles.clear();
-//    }
-
-    TerrainEngineNode::traverse( nv );
-
-    if ( nv.getVisitorType() == nv.CULL_VISITOR )
-    {
-//        {
-//            Threading::ScopedWriteLock exclusiveLock( s_tileUpdateMutex );
-            _tilesToUpdate.clear();
-//        }
-        BuildTileUpdateVec();
-
-        std::vector< osg::ref_ptr<TileNode> >::iterator it;
-
-        Threading::ScopedWriteLock exclusiveLock( s_tileUpdateMutex );
-
-        for(it = _tilesToUpdate.begin(); it != _tilesToUpdate.end(); it++)
-        {
-            (*it)->AdjustEdges(true);
-        }
-
-        for(it = _tilesToUpdate.begin(); it != _tilesToUpdate.end(); it++)
-        {
-            (*it)->AdjustEdges(false);
-        }
-
-        _tilesToUpdate.clear();
-
-//        CheckOrphanedBoundariesVisitor visitor;
-//        _terrain->accept(visitor);
     }
 }
 

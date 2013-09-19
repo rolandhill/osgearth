@@ -254,6 +254,8 @@ TileGroup::resetUsedLastFrameFlags()
 void
 TileGroup::GetDisplayedTilesForTarget(unsigned int x, unsigned int y, unsigned int lod, MPTerrainEngineNode::Side side, std::vector< TileNode* >& tnv)
 {
+    if(!_tilenode) return;
+
     if(_tilenode->getUsedLastFrame())
     {
         tnv.push_back(_tilenode);
@@ -312,13 +314,6 @@ TileGroup::GetDisplayedTilesForTarget(unsigned int x, unsigned int y, unsigned i
 void
 TileGroup::CollectTargetTiles(unsigned int subtile,  int x, unsigned int y, unsigned int lod, MPTerrainEngineNode::Side side, std::vector< TileNode* >& tnv)
 {
-    if ( numSubtilesLoaded() != 4 )
-    {
-//        // We push a NULL pointer onto the vector so that we know how many TileNodes have been used.
-//        tnv.push_back(0L);
-        return;
-    }
-
     //Tilenode is the first child, so we need to add 1 to get to first subtile
     TilePagedLOD* tpl = static_cast<TilePagedLOD*>( getChild(1+subtile) );
 

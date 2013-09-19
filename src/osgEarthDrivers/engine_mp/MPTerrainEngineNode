@@ -81,7 +81,6 @@ namespace osgEarth_engine_mp
 
         // for standalone tile creation outside of a terrain
         osg::Node* createTile(const TileKey& key);
-        virtual void traverse( osg::NodeVisitor& );
 
     public: // internal TerrainEngineNode
 
