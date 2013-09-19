@@ -199,7 +199,10 @@ TileGroup::traverse(osg::NodeVisitor& nv)
 
         if ( considerSubtiles )
         {
-            _tilenode->resetUsedLastFrameFlag();
+            if( nv.CULL_VISITOR )
+            {
+                _tilenode->resetUsedLastFrameFlag();
+            }
 
             for( unsigned q=0; q<4; ++q )
             {
@@ -217,7 +220,7 @@ TileGroup::traverse(osg::NodeVisitor& nv)
 
         if ( !considerSubtiles || !subtileFamilyReady || range > _subtileRange )
         {
-            if(!_tilenode->getUsedLastFrame())
+            if( nv.getVisitorType() == nv.CULL_VISITOR && !_tilenode->getUsedLastFrame() )
             {
                 for( unsigned q=0; q<4; ++q )
                 {
