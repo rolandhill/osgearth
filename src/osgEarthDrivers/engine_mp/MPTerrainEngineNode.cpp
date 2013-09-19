@@ -1021,6 +1021,7 @@ MPTerrainEngineNode::MarkBoundingTiles(TileNode* tilenode, Side side, unsigned i
 
     // Find target LOD0 node
     unsigned int index = numTilesY0 * lod0TileX + lod0TileY;
+    if(_terrain->getNumChildren() - 1 < index) return;
     osg::Node* node = _terrain->getChild(index);
 
     // If referring to the boundary wrt a neighbour, we will need to use the opposite side
