@@ -1016,20 +1016,21 @@ MPTerrainEngineNode::MarkBoundingTiles(TileNode* tilenode, Side side, unsigned i
     tx = tx - (lod0TileX * tilesPerLod0Tile);
     ty = ty - (lod0TileY * tilesPerLod0Tile);
 
-    //Set up a vector to hold bounding tilenodes
-    std::vector< TileNode* > tnv;
-
-    // Find target LOD0 node
-    unsigned int index = numTilesY0 * lod0TileX + lod0TileY;
-    if(_terrain->getNumChildren() - 1 < index) return;
-    osg::Node* node = _terrain->getChild(index);
-
     // If referring to the boundary wrt a neighbour, we will need to use the opposite side
     Side OtherSide;
     if(side == Side_W) OtherSide = Side_E;
     else if(side == Side_N) OtherSide = Side_S;
     else if(side == Side_E)  OtherSide = Side_W;
     else if(side == Side_S)  OtherSide = Side_N;
+
+    //Set up a vector to hold bounding tilenodes
+    std::vector< TileNode* > tnv;
+
+    // Find target LOD0 node
+    unsigned int index = numTilesY0 * lod0TileX + lod0TileY;
+    osg::Group* rtg = static_cast<osg::Group*>( _terrain->getChild(0) ); // RootTileGroup
+    osg::Group* tpl = static_cast<osg::Group*>( rtg->getChild(index) ); // TilePagedLOD
+    osg::Node* node = tpl->getChild(0);
 
     // Node will usually be a TileGroup
     TileGroup* tg = dynamic_cast<TileGroup*>(node);

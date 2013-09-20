@@ -317,6 +317,8 @@ TileGroup::CollectTargetTiles(unsigned int subtile,  int x, unsigned int y, unsi
     //Tilenode is the first child, so we need to add 1 to get to first subtile
     TilePagedLOD* tpl = static_cast<TilePagedLOD*>( getChild(1+subtile) );
 
+    if(!tpl->isLoaded()) return;
+
     osg::Node* node = tpl->getChild(0);
 
     // Node will usually be a TileGroup
