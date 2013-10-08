@@ -110,8 +110,9 @@ BuildGeometryFilter::process( FeatureList& features, const FilterContext& contex
             Geometry::Type renderType = Geometry::TYPE_UNKNOWN;
 
             // First priority is the symbol with a compatible part type.
-            if (polySymbol != 0L && 
-                part->getType() != Geometry::TYPE_POINTSET && 
+#if 0
+            if (polySymbol != 0L &&
+                part->getType() != Geometry::TYPE_POINTSET &&
                 part->getTotalPointCount() >= 3)
             {
                 renderType = Geometry::TYPE_POLYGON;
@@ -133,6 +134,44 @@ BuildGeometryFilter::process( FeatureList& features, const FilterContext& contex
             {
                 renderType = part->getType();
             }
+#else
+            // First priority is a matching part type and symbol:
+            if ( polySymbol != 0L && part->getType() == Geometry::TYPE_POLYGON )
+            {
+                renderType = Geometry::TYPE_POLYGON;
+            }
+            else if ( lineSymbol != 0L && part->isLinear() )
+            {
+                renderType = part->getType();
+            }
+            else if ( pointSymbol != 0L && part->getType() == Geometry::TYPE_POINTSET )
+            {
+                renderType = Geometry::TYPE_POINTSET;
+            }
+
+            // Second priority is the symbol:
+            else if ( polySymbol != 0L )
+            {
+                renderType = Geometry::TYPE_POLYGON;
+            }
+            else if ( lineSymbol != 0L )
+            {
+                if ( part->getType() == Geometry::TYPE_POLYGON )
+                    renderType = Geometry::TYPE_RING;
+                else
+                    renderType = Geometry::TYPE_LINESTRING;
+            }
+            else if ( pointSymbol != 0L )
+            {
+                renderType = Geometry::TYPE_POINTSET;
+            }
+
+            // No symbol? just use the geometry type.
+            else
+            {
+                renderType = part->getType();
+            }
+#endif
 
             // validate the geometry:
             if ( renderType == Geometry::TYPE_POLYGON && part->size() < 3 )
@@ -141,12 +180,17 @@ BuildGeometryFilter::process( FeatureList& features, const FilterContext& contex
                 continue;
 
             // resolve the color:
+//            osg::Vec4f primaryColor =
+//                polySymbol ? osg::Vec4f(polySymbol->fill()->color()) :
+//                lineSymbol ? osg::Vec4f(lineSymbol->stroke()->color()) :
+//                pointSymbol ? osg::Vec4f(pointSymbol->fill()->color()) :
+//                osg::Vec4f(1,1,1,1);
             osg::Vec4f primaryColor =
-                polySymbol ? osg::Vec4f(polySymbol->fill()->color()) :
-                lineSymbol ? osg::Vec4f(lineSymbol->stroke()->color()) :
-                pointSymbol ? osg::Vec4f(pointSymbol->fill()->color()) :
+                renderType == Geometry::TYPE_POLYGON ? osg::Vec4f(polySymbol->fill()->color()) :
+                renderType == Geometry::TYPE_LINESTRING || renderType == Geometry::TYPE_RING ? osg::Vec4f(lineSymbol->stroke()->color()) :
+                renderType == Geometry::TYPE_POINTSET ? osg::Vec4f(pointSymbol->fill()->color()) :
                 osg::Vec4f(1,1,1,1);
-            
+
             osg::Geometry* osgGeom = new osg::Geometry();
             osgGeom->setUseVertexBufferObjects( _useVertexBufferObjects.value() );
 
@@ -167,7 +211,7 @@ BuildGeometryFilter::process( FeatureList& features, const FilterContext& contex
             else
             {
                 // line or point geometry
-                GLenum primMode = 
+                GLenum primMode =
                     renderType == Geometry::TYPE_LINESTRING ? GL_LINE_STRIP :
                     renderType == Geometry::TYPE_RING       ? GL_LINE_LOOP :
                     GL_POINTS;
@@ -190,7 +234,7 @@ BuildGeometryFilter::process( FeatureList& features, const FilterContext& contex
 
             if (allPoints->getVertexBufferObject())
                 allPoints->getVertexBufferObject()->setUsage(GL_STATIC_DRAW_ARB);
-            
+
             // subdivide the mesh if necessary to conform to an ECEF globe:
             if ( makeECEF && renderType != Geometry::TYPE_POINTSET )
             {
@@ -199,7 +243,7 @@ BuildGeometryFilter::process( FeatureList& features, const FilterContext& contex
                 bool disableTess = line && line->tessellation().isSetTo(0);
 
                 if ( makeECEF && !disableTess )
-                {                    
+                {
                     double threshold = osg::DegreesToRadians( *_maxAngle_deg );
                     OE_DEBUG << "Running mesh subdivider with threshold " << *_maxAngle_deg << std::endl;
 
@@ -215,21 +259,21 @@ BuildGeometryFilter::process( FeatureList& features, const FilterContext& contex
 
 
             // assign the primary color:
-#if USE_SINGLE_COLOR            
+#if USE_SINGLE_COLOR
             osg::Vec4Array* colors = new osg::Vec4Array( 1 );
-            (*colors)[0] = primaryColor;            
+            (*colors)[0] = primaryColor;
             osgGeom->setColorArray( colors );
             osgGeom->setColorBinding( osg::Geometry::BIND_OVERALL );
 #else
 
             osg::Vec4Array* colors = new osg::Vec4Array( osgGeom->getVertexArray()->getNumElements() ); //allPoints->size() );
             for(unsigned c=0; c<colors->size(); ++c)
-                (*colors)[c] = primaryColor;            
+                (*colors)[c] = primaryColor;
             osgGeom->setColorArray( colors );
             osgGeom->setColorBinding( osg::Geometry::BIND_PER_VERTEX );
 #endif
-            
-            
+
+
 
             _geode->addDrawable( osgGeom );
 
@@ -249,28 +293,28 @@ BuildGeometryFilter::process( FeatureList& features, const FilterContext& contex
                 buildPolygon(part, featureSRS, mapSRS, makeECEF, false, outline);
 
                 if ( outline->getVertexArray()->getVertexBufferObject() )
-                    outline->getVertexArray()->getVertexBufferObject()->setUsage(GL_STATIC_DRAW_ARB);                
-                
-                osg::Vec4f outlineColor = lineSymbol->stroke()->color();                
+                    outline->getVertexArray()->getVertexBufferObject()->setUsage(GL_STATIC_DRAW_ARB);
 
-                osg::Vec4Array* outlineColors = new osg::Vec4Array();   
+                osg::Vec4f outlineColor = lineSymbol->stroke()->color();
+
+                osg::Vec4Array* outlineColors = new osg::Vec4Array();
                 outline->setColorArray(outlineColors);
 #if USE_SINGLE_COLOR
                 outlineColors->reserve(1);
                 outlineColors->push_back( outlineColor );
                 outline->setColorBinding( osg::Geometry::BIND_OVERALL );
 #else
-                unsigned pcount = part->getTotalPointCount();                
+                unsigned pcount = part->getTotalPointCount();
                 outlineColors->reserve( pcount );
                 for( unsigned c=0; c < pcount; ++c )
                     outlineColors->push_back( outlineColor );
-                outline->setColorBinding( osg::Geometry::BIND_PER_VERTEX );                
-#endif                
+                outline->setColorBinding( osg::Geometry::BIND_PER_VERTEX );
+#endif
 
-                // check for explicit tessellation disable:                
+                // check for explicit tessellation disable:
                 bool disableTess = lineSymbol && lineSymbol->tessellation().isSetTo(0);
 
-                // subdivide if necessary.                
+                // subdivide if necessary.
                 if ( makeECEF && !disableTess )
                 {
                     double threshold = osg::DegreesToRadians( *_maxAngle_deg );
@@ -298,7 +342,7 @@ BuildGeometryFilter::process( FeatureList& features, const FilterContext& contex
 
         }
     }
-    
+
     return true;
 }
 
@@ -335,7 +379,7 @@ BuildGeometryFilter::buildPolygon(Geometry*               ring,
 
                 osgGeom->addPrimitiveSet( new osg::DrawArrays( mode, offset, hole->size() ) );
                 offset += hole->size();
-            }            
+            }
         }
     }
     osgGeom->setVertexArray( allPoints );
@@ -410,7 +454,7 @@ BuildGeometryFilter::push( FeatureList& input, FilterContext& context )
 
             const PointSymbol* pointSymbol = _style.getSymbol<PointSymbol>();
             if ( pointSymbol && pointSymbol->size().isSet() )
-                _geode->getOrCreateStateSet()->setAttribute( 
+                _geode->getOrCreateStateSet()->setAttribute(
                     new osg::Point( *pointSymbol->size() ), osg::StateAttribute::ON );
         }
 
