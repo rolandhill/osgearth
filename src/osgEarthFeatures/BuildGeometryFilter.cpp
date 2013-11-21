@@ -499,6 +499,7 @@ BuildGeometryFilter::push( FeatureList& input, FilterContext& context )
     {
         Feature* f = i->get();
 
+#if(0)
         // first consider the overall style:
         bool has_polysymbol     = poly != 0L;
         bool has_linesymbol     = line != 0L && line->stroke()->widthUnits() == Units::PIXELS;
@@ -548,6 +549,26 @@ BuildGeometryFilter::push( FeatureList& input, FilterContext& context )
 
         if ( has_pointsymbol )
             points.push_back( f );
+
+#else
+            switch( f->getGeometry()->getComponentType() )
+            {
+            case Geometry::TYPE_LINESTRING:
+            case Geometry::TYPE_RING:
+                lines.push_back( f );
+                break;
+
+            case Geometry::TYPE_POINTSET:
+                points.push_back( f );
+                break;
+
+            case Geometry::TYPE_POLYGON:
+                polygons.push_back( f );
+                lines.push_back( f );
+                break;
+            }
+
+#endif
     }
 
     // process them separately.

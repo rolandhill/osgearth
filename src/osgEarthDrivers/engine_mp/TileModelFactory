@@ -155,8 +155,9 @@ namespace osgEarth_engine_mp
         void createTileModel(
             const TileKey&           key,
             const MapFrame&          frame,
-            osg::ref_ptr<TileModel>& out_model);//,
+            osg::ref_ptr<TileModel>& out_model,
             //bool&                    out_hasRealData);
+            float default_height );
 
     private:        
 

@@ -539,7 +539,9 @@ ElevationLayerVector::createHeightField(const TileKey&                  key,
                                         ElevationSamplePolicy           samplePolicy,
                                         osg::ref_ptr<osg::HeightField>& out_result,
                                         bool*                           out_isFallback,
-                                        ProgressCallback*               progress )  const
+                                        ProgressCallback*               progress,
+                                        bool                            rejectNoData,
+                                        float                           noDataHeight) const
 {
     unsigned lowestLOD = key.getLevelOfDetail();
     bool hfInitialized = false;
@@ -639,7 +641,8 @@ ElevationLayerVector::createHeightField(const TileKey&                  key,
             out_result = HeightFieldUtils::createReferenceHeightField( 
                 keyToUse.getExtent(), 
                 defaultSize, 
-                defaultSize );
+                defaultSize,
+                noDataHeight );
 
             if ( offsetHeightFields.size() == 0 )
             return true;
@@ -780,7 +783,7 @@ ElevationLayerVector::createHeightField(const TileKey&                  key,
 
     // Replace any NoData areas with the reference value. This is zero for HAE datums,
     // and some geoid height for orthometric datums.
-    if (out_result.valid())
+    if (out_result.valid() && !rejectNoData)
     {
         const Geoid*         geoid = 0L;
         const VerticalDatum* vdatum = key.getProfile()->getSRS()->getVerticalDatum();
@@ -794,7 +797,8 @@ ElevationLayerVector::createHeightField(const TileKey&                  key,
             out_result.get(),
             key.getExtent(),
             NO_DATA_VALUE,
-            geoid );
+            geoid,
+            noDataHeight );
     }
 
     // Initialize the HF values

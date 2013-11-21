@@ -33,6 +33,8 @@ using namespace osgEarth::Drivers;
 
 namespace osgEarth_engine_mp
 {
+    class MPTerrainEngineNode;
+
     class SingleKeyNodeFactory : public KeyNodeFactory
     {
     public:
@@ -63,6 +65,8 @@ namespace osgEarth_engine_mp
          */
         osg::Node* createNode( const TileKey& key, bool setupChildren, ProgressCallback* progress );
 
+        void setTerrainEngineNode( MPTerrainEngineNode* ten) { _terrainEngineNode = ten; }
+
     protected:
         osg::Node* createTile(TileModel* model, bool setupChildren);
 
@@ -74,6 +78,8 @@ namespace osgEarth_engine_mp
         const MPTerrainEngineOptions&       _options;
         osg::ref_ptr< TerrainNode >         _terrain;
         UID                                 _engineUID;
+
+        osg::ref_ptr<MPTerrainEngineNode> _terrainEngineNode;
     };
 
 } // namespace osgEarth_engine_mp

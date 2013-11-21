@@ -259,8 +259,9 @@ TileModelFactory::getHeightFieldCache() const
 void
 TileModelFactory::createTileModel(const TileKey&           key, 
                                   const MapFrame&          frame,
-                                  osg::ref_ptr<TileModel>& out_model) //,
+                                  osg::ref_ptr<TileModel>& out_model,
                                   //bool&                    out_hasRealData)
+                                  float                    default_height )
 {
 
     osg::ref_ptr<TileModel> model = new TileModel( frame.getRevision(), frame.getMapInfo() );
@@ -303,7 +304,7 @@ TileModelFactory::createTileModel(const TileKey&           key,
     // as fallback data of course)
     if ( !model->_elevationData.getHeightField() )
     {
-        osg::HeightField* hf = HeightFieldUtils::createReferenceHeightField( key.getExtent(), 15, 15 );
+        osg::HeightField* hf = HeightFieldUtils::createReferenceHeightField( key.getExtent(), 15, 15, default_height );
         model->_elevationData = TileModel::ElevationData(
             hf,
             GeoLocator::createForKey(key, frame.getMapInfo()),

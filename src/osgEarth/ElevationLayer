@@ -172,7 +172,9 @@ namespace osgEarth
             ElevationSamplePolicy           samplePolicy,
             osg::ref_ptr<osg::HeightField>& out_result,
             bool*                           out_isFallback,
-            ProgressCallback*               progress ) const;
+            ProgressCallback*               progress,
+            bool                            rejectNoData,
+            float                           noDataHeight) const;
 
     public:
         /** Default ctor */

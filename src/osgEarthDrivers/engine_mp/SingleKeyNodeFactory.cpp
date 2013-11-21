@@ -102,6 +102,7 @@ SingleKeyNodeFactory::createTile(TileModel* model, bool setupChildrenIfNecessary
 {
     // compile the model into a node:
     TileNode* tileNode = _modelCompiler->compile( model, _frame );
+    tileNode->setTerrainEngineNode( _terrainEngineNode.get() );
 
     // see if this tile might have children.
     bool prepareForChildren =
@@ -135,7 +136,7 @@ SingleKeyNodeFactory::createTile(TileModel* model, bool setupChildrenIfNecessary
         options->setFileLocationCallback( new FileLocationCallback() );
         plod->setDatabaseOptions( options );
 #endif
-        
+
         result = plod;
 
         // this one rejects back-facing tiles:
@@ -160,7 +161,7 @@ SingleKeyNodeFactory::createTile(TileModel* model, bool setupChildrenIfNecessary
 
 
 osg::Node*
-SingleKeyNodeFactory::createNode(const TileKey&    key, 
+SingleKeyNodeFactory::createNode(const TileKey&    key,
                                  bool              setupChildren,
                                  ProgressCallback* progress )
 {
@@ -168,16 +169,16 @@ SingleKeyNodeFactory::createNode(const TileKey&    key,
         return 0L;
 
     _frame.sync();
-    
+
     osg::ref_ptr<TileModel> model[4];
     for(unsigned q=0; q<4; ++q)
     {
         TileKey child = key.createChildKey(q);
-        _modelFactory->createTileModel( child, _frame, model[q] );
+        _modelFactory->createTileModel( child, _frame, model[q], _options.noDataHeight().value() );
     }
 
     bool subdivide =
-        _options.minLOD().isSet() && 
+        _options.minLOD().isSet() &&
         key.getLOD() < _options.minLOD().value();
 
     if ( !subdivide )
@@ -196,14 +197,15 @@ SingleKeyNodeFactory::createNode(const TileKey&    key,
 
     if ( subdivide )
     {
-        if ( _options.incrementalUpdate() == true )
-        {
+    // To use TileStitching we always need to have a TileGroup
+//        if ( _options.incrementalUpdate() == true )
+//        {
             quad = new TileGroup(key, _engineUID, _liveTiles.get(), _deadTiles.get());
-        }
-        else
-        {
-            quad = new osg::Group();
-        }
+//        }
+//        else
+//        {
+//            quad = new osg::Group();
+//        }
 
         for( unsigned q=0; q<4; ++q )
         {
