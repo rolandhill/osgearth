@@ -203,7 +203,6 @@ namespace
 
         for (MaskLayerVector::const_iterator it = d.maskLayers.begin(); it != d.maskLayers.end(); ++it)
         {
-<<<<<<< HEAD
             if ((*it)->getMinLevel() <= d.model->_tileKey.getLevelOfDetail())
             {
 
@@ -218,7 +217,7 @@ namespace
 
                 // TODO: no need to do this for every tile right?
                 osg::Vec3dArray* boundary = (*it)->getOrCreateBoundary(
-                    scale, 
+                    scale,
                     d.model->_tileLocator->getDataExtent().getSRS() );
 
                 if ( boundary )
@@ -262,62 +261,6 @@ namespace
                     }
                 }
             }
-=======
-          // When displaying Plate Carre, Heights have to be converted from meters to degrees.
-          // This is also true for mask feature
-          // TODO: adjust this calculation based on the actual EllipsoidModel.
-          float scale = d.scaleHeight;
-          if (d.model->_tileLocator->getCoordinateSystemType() == osgEarth::GeoLocator::GEOGRAPHIC)
-          {
-            scale = d.scaleHeight / 111319.0f;
-          }
-
-          // TODO: no need to do this for every tile right?
-          osg::Vec3dArray* boundary = (*it)->getOrCreateBoundary(
-              scale,
-              d.model->_tileLocator->getDataExtent().getSRS() );
-
-          if ( boundary )
-          {
-              osg::Vec3d min, max;
-              min = max = boundary->front();
-
-              for (osg::Vec3dArray::iterator it = boundary->begin(); it != boundary->end(); ++it)
-              {
-                if (it->x() < min.x())
-                  min.x() = it->x();
-
-                if (it->y() < min.y())
-                  min.y() = it->y();
-
-                if (it->x() > max.x())
-                  max.x() = it->x();
-
-                if (it->y() > max.y())
-                  max.y() = it->y();
-              }
-
-              osg::Vec3d min_ndc, max_ndc;
-              d.geoLocator->modelToUnit(min, min_ndc);
-              d.geoLocator->modelToUnit(max, max_ndc);
-
-              bool x_match = ((min_ndc.x() >= 0.0 && max_ndc.x() <= 1.0) ||
-                              (min_ndc.x() <= 0.0 && max_ndc.x() > 0.0) ||
-                              (min_ndc.x() < 1.0 && max_ndc.x() >= 1.0));
-
-              bool y_match = ((min_ndc.y() >= 0.0 && max_ndc.y() <= 1.0) ||
-                              (min_ndc.y() <= 0.0 && max_ndc.y() > 0.0) ||
-                              (min_ndc.y() < 1.0 && max_ndc.y() >= 1.0));
-
-              if (x_match && y_match)
-              {
-                  d.stitchGeom = new MPGeometry( d.model->_tileKey, d.frame, d.textureImageUnit );
-                  //d.stitchGeom->setUseVertexBufferObjects(d.useVBOs);
-                  d.surfaceGeode->addDrawable(d.stitchGeom);
-                  d.maskRecords.push_back( MaskRecord(boundary, min_ndc, max_ndc, d.stitchGeom) );
-              }
-           }
->>>>>>> Tile stitching, no-data rejection and other features updated to work with oe2.5 RC5.
         }
 
 #if 0
