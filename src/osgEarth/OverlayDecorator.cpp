@@ -431,9 +431,6 @@ OverlayDecorator::cullTerrainAndCalculateRTTParams(osgUtil::CullVisitor* cv,
     // height above sea level
     double hasl;
 
-    // weight of the HASL value when calculating extent compensation
-//    double haslWeight;
-
     // approximate distance to the visible horizon
     double horizonDistance;
 
@@ -450,7 +447,8 @@ OverlayDecorator::cullTerrainAndCalculateRTTParams(osgUtil::CullVisitor* cv,
         hasl = geodetic.z();
         R = eyeLen - hasl;
 
-        //Actually sample the terrain to get the height and adjust the eye position so it's a tighter fit to the real data.
+        //Actually sample the terrain to get the height and adjust the radius of the sphere so it's a tighter fit to the real data.
+        // Note: We don't adjust hasl. If we do, it makes the draped image flick off as the camera approaches the surface - R Hill.
         double height;
         if (_engine->getTerrain()->getHeight(geoSRS, geodetic.x(), geodetic.y(), &height)) // SpatialReference::create("epsg:4326"), osg::RadiansToDegrees( lon ), osg::RadiansToDegrees( lat ), &height))
         {
@@ -458,6 +456,7 @@ OverlayDecorator::cullTerrainAndCalculateRTTParams(osgUtil::CullVisitor* cv,
             R = eyeLen - geodetic.z();
         }
 
+        // Set a minimum distance from the ground.
         if( hasl > 0 )
         {
             hasl = osg::maximum( hasl, 100.0 );
@@ -476,6 +475,7 @@ OverlayDecorator::cullTerrainAndCalculateRTTParams(osgUtil::CullVisitor* cv,
     {
         hasl = eye.z();
 
+        // Set a minimum distance from the ground.
         if( hasl > 0 )
         {
             hasl = osg::maximum( hasl, 100.0 );
@@ -485,6 +485,7 @@ OverlayDecorator::cullTerrainAndCalculateRTTParams(osgUtil::CullVisitor* cv,
             hasl = osg::minimum( hasl, -100.0 );
         }
 
+        // eyeLen should be positive
         eyeLen = fabs(hasl) * 2.0;
 
         //Actually sample the terrain to get the height of the plane for projection volume intersection later.
@@ -504,10 +505,6 @@ OverlayDecorator::cullTerrainAndCalculateRTTParams(osgUtil::CullVisitor* cv,
 
     // update the shared horizon distance.
     pvd._sharedHorizonDistance = horizonDistance;
-
-    // create a "weighting" that weights HASL against the camera's pitch.
-//    osg::Vec3d lookVector = cv->getLookVectorLocal();
-//    haslWeight = osg::absolute(worldUp * lookVector);
 
     // unit look-vector of the eye:
     osg::Vec3d camEye, camTo, camUp;
@@ -560,7 +557,8 @@ OverlayDecorator::cullTerrainAndCalculateRTTParams(osgUtil::CullVisitor* cv,
     double maxDist2 = 0.0;
 
     // constrain the far plane.
-    // intersect the top corners of the projection volume since those are the farthest.
+    // We need to intersect all corners of the projection volume with the sphere / plane when allowing the camera to rotate through all it's axes - R Hill.
+    // We also keep count of the number of successful interscetions as we can only constrain the far plane if none of the corners look tothe horizon.
     int validint = 0;
     if ( _isGeocentric )
     {
@@ -662,11 +660,13 @@ OverlayDecorator::cullTerrainAndCalculateRTTParams(osgUtil::CullVisitor* cv,
     osg::Vec3d up = camLook;
     if ( _isGeocentric )
     {
+        // Reflect the camera location across the spheres surface if it is underground
         osg::Vec3d camref = camEye;
         if( hasl < 0 )
         {
             camref = camEye - worldUp * 2.0 * hasl;
         }
+        // rttEye should be above ground, so use the reflected camera location
         osg::Vec3d rttEye = camref+worldUp*zspan;
         //establish a valid up vector
         osg::Vec3d rttLook = -rttEye;
@@ -678,6 +678,7 @@ OverlayDecorator::cullTerrainAndCalculateRTTParams(osgUtil::CullVisitor* cv,
         }
         else if ( dot < -0.999 )
         {
+            // Underground camera location
             up.set( -camUp );
         }
 
@@ -694,9 +695,11 @@ OverlayDecorator::cullTerrainAndCalculateRTTParams(osgUtil::CullVisitor* cv,
         }
         else if ( dot < -0.999 )
         {
+            // Underground camera location
             up.set( -camUp );
         }
 
+        // Reflect the camera location across the spheres surface if it is underground
         osg::Vec3d camref = osg::Vec3d(camEye.x(), camEye.y(), fabs(camEye.z()));
         rttViewMatrix.makeLookAt(  camref + worldUp*zspan, camref - worldUp*zspan, up );
     }
