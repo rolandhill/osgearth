@@ -47,7 +47,7 @@ namespace
 {
     struct ComputeVisibleBounds : public osg::NodeVisitor
     {
-        ComputeVisibleBounds(osg::Polytope& tope, osg::Matrix& local2world) 
+        ComputeVisibleBounds(osg::Polytope& tope, osg::Matrix& local2world)
             : osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ACTIVE_CHILDREN)
         {
             _matrixStack.push(local2world);
@@ -127,14 +127,14 @@ namespace
     /**
      * Interects a finite ray with a sphere of radius R. The ray is defined
      * by the X and Y components (in projection aka "clip" space). The function
-     * uses this information to build a ray from Z=-1 to Z=1. 
+     * uses this information to build a ray from Z=-1 to Z=1.
      *
      * Places the intersection point(s) in the output vector.
      */
     bool
-    intersectClipRayWithSphere(double                   clipx, 
-                               double                   clipy, 
-                               const osg::Matrix&       clipToWorld, 
+    intersectClipRayWithSphere(double                   clipx,
+                               double                   clipy,
+                               const osg::Matrix&       clipToWorld,
                                double                   R,
                                double&                  inout_maxDist2)
     {
@@ -208,8 +208,8 @@ namespace
      * (for use in projected map mode)
      */
     void
-    intersectClipRayWithPlane(double                   clipx, 
-                              double                   clipy, 
+    intersectClipRayWithPlane(double                   clipx,
+                              double                   clipy,
                               const osg::Matrix&       clipToWorld,
                               double&                  inout_maxDist2)
     {
@@ -234,7 +234,7 @@ namespace
 
 
     /**
-     * Takes a set of world verts and finds their X-Y bounding box in the 
+     * Takes a set of world verts and finds their X-Y bounding box in the
      * plane of the camera represented by the specified view matrix. Also
      * calculates the maximum distance from the eyepoint to a vertex (3D).
      */
@@ -256,7 +256,7 @@ namespace
             if ( d.x() > xmax ) xmax = d.x();
             if ( d.y() < ymin ) ymin = d.y();
             if ( d.y() > ymax ) ymax = d.y();
-            
+
             double dist2 = ((*i)-eye).length2();
             if ( dist2 > maxDist2 )
                 maxDist2 = dist2;
@@ -267,7 +267,7 @@ namespace
 
 
     /**
-     * 
+     *
      */
     void
     getNearFar(const osg::Matrix&      viewMatrix,
@@ -331,7 +331,7 @@ void
 OverlayDecorator::onGroupChanged(osg::Group* group)
 {
     // the group changed so we need to give the corresponding
-    // technique a chance to re-establish itself based on the 
+    // technique a chance to re-establish itself based on the
     // contents of that group.
 
     // update the total child count
@@ -389,7 +389,7 @@ OverlayDecorator::onInstall( TerrainEngineNode* engine )
     _ellipsoid = info.getProfile()->getSRS()->getEllipsoid();
 
     //todo: need this? ... probably not anymore
-    _useShaders = 
+    _useShaders =
         Registry::capabilities().supportsGLSL() && (
             !engine->getTextureCompositor() ||
             engine->getTextureCompositor()->usesShaderComposition() );
@@ -448,22 +448,30 @@ OverlayDecorator::cullTerrainAndCalculateRTTParams(osgUtil::CullVisitor* cv,
 
         hasl = geodetic.z();
         R = eyeLen - hasl;
-        
+
         //Actually sample the terrain to get the height and adjust the eye position so it's a tighter fit to the real data.
         double height;
         if (_engine->getTerrain()->getHeight(geoSRS, geodetic.x(), geodetic.y(), &height)) // SpatialReference::create("epsg:4326"), osg::RadiansToDegrees( lon ), osg::RadiansToDegrees( lat ), &height))
         {
             geodetic.z() -= height;
         }
-        hasl = osg::maximum( hasl, 100.0 );
+
+        if( hasl > 0 )
+        {
+            hasl = osg::maximum( hasl, 100.0 );
+        }
+        else
+        {
+            hasl = osg::minimum( hasl, -100.0 );
+        }
 
         // up vector tangent to the ellipsoid under the eye.
         worldUp = _ellipsoid->computeLocalUpVector(eye.x(), eye.y(), eye.z());
 
         // radius of the earth under the eyepoint
         // gw: wrong. use R instead.
-        double radius = eyeLen - hasl; 
-        horizonDistance = sqrt( 2.0*radius*hasl + hasl*hasl );
+        double radius = eyeLen - geodetic.z();
+        horizonDistance = sqrt( 2.0*radius*fabs(hasl) + hasl*hasl );
     }
     else // projected map
     {
@@ -476,7 +484,7 @@ OverlayDecorator::cullTerrainAndCalculateRTTParams(osgUtil::CullVisitor* cv,
         // so just simulate one.
         horizonDistance = sqrt(2.0*6356752.3142*hasl + hasl*hasl);
     }
-    
+
     // update the shared horizon distance.
     pvd._sharedHorizonDistance = horizonDistance;
 
@@ -500,7 +508,7 @@ OverlayDecorator::cullTerrainAndCalculateRTTParams(osgUtil::CullVisitor* cv,
     cv->setCalculatedNearPlane( FLT_MAX );
     cv->setCalculatedFarPlane( -FLT_MAX );
 
-    // cull the subgraph (i.e. the terrain) here. This doubles as the subgraph's official 
+    // cull the subgraph (i.e. the terrain) here. This doubles as the subgraph's official
     // cull traversal and a gathering of its clip planes.
     cv->pushStateSet( pvd._sharedTerrainStateSet.get() );
     osg::Group::traverse( *cv );
@@ -564,14 +572,14 @@ OverlayDecorator::cullTerrainAndCalculateRTTParams(osgUtil::CullVisitor* cv,
         inverseMVP.invert(MVP);
     }
 
-    // calculate the new RTT matrices. All techniques will share the 
+    // calculate the new RTT matrices. All techniques will share the
     // same set. We could probably put these in the "shared" category
     // and use pointers..todo.
     osg::Matrix rttViewMatrix, rttProjMatrix;
 
     // for a camera that cares about geometry (like the draping technique) it's important
     // to include the geometry in the ortho-camera's Z range. But for a camera that just
-    // cares about the terrain depth (like the clamping technique) we want to constrain 
+    // cares about the terrain depth (like the clamping technique) we want to constrain
     // the Ortho Z as mush as possible in order to maintain depth precision. Perhaps
     // later we can split this out and have each technique calculation its own View and
     // Proj matrix.
@@ -652,7 +660,7 @@ OverlayDecorator::cullTerrainAndCalculateRTTParams(osgUtil::CullVisitor* cv,
         if ( verts.size() > 0 )
         {
             // calculate an orthographic RTT projection matrix based on the view-space
-            // bounds of the vertex list (i.e. the extents surrounding the RTT camera 
+            // bounds of the vertex list (i.e. the extents surrounding the RTT camera
             // that bounds all the polyherdron verts in its XY plane)
             double xmin, ymin, xmax, ymax, maxDist;
             getExtentInSilhouette(rttViewMatrix, eye, verts, xmin, ymin, xmax, ymax, maxDist);
@@ -664,7 +672,7 @@ OverlayDecorator::cullTerrainAndCalculateRTTParams(osgUtil::CullVisitor* cv,
             if ( _isGeocentric )
                 dist = std::min(dist, eyeLen);
 
-            // Even through using xmin and xmax directly results in a tighter fit, 
+            // Even through using xmin and xmax directly results in a tighter fit,
             // it offsets the eyepoint from the center of the projection frustum.
             // This causes problems for the draping projection matrix optimizer, so
             // for now instead of re-doing that code we will just center the eyepoint
@@ -777,7 +785,7 @@ OverlayDecorator::getPerViewData(osg::Camera* key)
         initializePerViewData(pvd, key);
 
         return pvd;
-    }    
+    }
 }
 
 
@@ -786,7 +794,7 @@ OverlayDecorator::traverse( osg::NodeVisitor& nv )
 {
     bool defaultTraversal = true;
 
-    // in the CULL traversal, find the per-view data associated with the 
+    // in the CULL traversal, find the per-view data associated with the
     // cull visitor's current camera view and work with that:
     if ( nv.getVisitorType() == nv.CULL_VISITOR )
     {
