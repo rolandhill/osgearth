@@ -106,14 +106,14 @@ namespace
         // frustum is symmertical (as calculated in OverlayDecorator)
         // we only need find the half-width of each.
         //
-        // NOTE: this algorithm only works with the top-down RTT camera 
+        // NOTE: this algorithm only works with the top-down RTT camera
         // created by the OverlayDecorator, AND assumes a "level" view
         // camera (no roll) with respect to the RTT camera.
         osg::Vec4d t0, t1, t2, t3;
         {
             // cap the width of the far line w.r.t to y-axis of the clip
             // space. (derived empirically)
-            const double maxApsectRatio   = 1.0; 
+            const double maxApsectRatio   = 1.0;
 
             // this matrix xforms the verts from model to clip space.
             osg::Matrix rttMVP = params._rttViewMatrix * params._rttProjMatrix;
@@ -152,7 +152,7 @@ namespace
             {
                 osg::Vec3d p = f->vertices[i] * rttMVP;
                 // only check points on the right (since it's symmetrical)
-                if ( p.x() > 0 ) 
+                if ( p.x() > 0 )
                 {
                     osg::Vec3d pv(p.x(), p.y()+1.0, 0); pv.normalize();
                     double dp = look * pv;
@@ -202,7 +202,7 @@ namespace
                 halfWidthNear = std::max(halfWidthNear, minHalfWidthNear);
             }
 
-            // if the far plane is narrower than the near plane, bail out and 
+            // if the far plane is narrower than the near plane, bail out and
             // fall back on a simple rectangular clip camera.
             if ( halfWidthFar <= halfWidthNear )
                 return;
@@ -225,7 +225,7 @@ namespace
         // through a series of matrix operations.
         osg::Vec4d  u, v;
         osg::Matrix M;
-        
+
         // translate the center of the near plane to the origin
         u = (t2 + t3) / 2.0;
         osg::Matrix T1;
@@ -273,7 +273,7 @@ namespace
 
         // btw, this new clip matrix distorts the Z coordinate as
         // y approaches +1. That can cause bleed-through in a geocentric
-        // terrain from the other side of the globe. To prevent that, sample a 
+        // terrain from the other side of the globe. To prevent that, sample a
         // point at the near plane and record that as the Maximum allowable
         // Z coordinate; a vertex shader in the RTT camera will enforce this.
         osg::Vec4d sampleFar = osg::Vec4d(0,1,1,1) * M;
@@ -373,11 +373,11 @@ DrapingTechnique::setUpCamera(OverlayDecorator::TechRTTParams& params)
         OE_INFO << LC << "Attaching a stencil buffer to the RTT camera" << std::endl;
 
         // try a depth-packed buffer. failing that, try a normal one.. if the FBO doesn't support
-        // that (which is doesn't on some GPUs like Intel), it will automatically fall back on 
+        // that (which is doesn't on some GPUs like Intel), it will automatically fall back on
         // a PBUFFER_RTT impl
         if ( Registry::capabilities().supportsDepthPackedStencilBuffer() )
         {
-#ifdef OSG_GLES2_AVAILABLE 
+#ifdef OSG_GLES2_AVAILABLE
             params._rttCamera->attach( osg::Camera::PACKED_DEPTH_STENCIL_BUFFER, GL_DEPTH24_STENCIL8_EXT );
 #else
             params._rttCamera->attach( osg::Camera::PACKED_DEPTH_STENCIL_BUFFER, GL_DEPTH_STENCIL_EXT );
@@ -406,13 +406,13 @@ DrapingTechnique::setUpCamera(OverlayDecorator::TechRTTParams& params)
     VirtualProgram* rtt_vp = VirtualProgram::getOrCreate(rttStateSet);
     rtt_vp->setName( "DrapingTechnique RTT" );
     rtt_vp->setInheritShaders( false );
-    
+
     // activate blending within the RTT camera's FBO
     if ( _rttBlending )
     {
-        //Setup a separate blend function for the alpha components and the RGB components.  
+        //Setup a separate blend function for the alpha components and the RGB components.
         //Because the destination alpha is initialized to 0 instead of 1
-        osg::BlendFunc* blendFunc = 0;        
+        osg::BlendFunc* blendFunc = 0;
         if (Registry::capabilities().supportsGLSL(1.4f))
         {
             //Blend Func Separate is only available on OpenGL 1.4 and above
@@ -430,7 +430,7 @@ DrapingTechnique::setUpCamera(OverlayDecorator::TechRTTParams& params)
         rttStateSet->setMode(GL_BLEND, osg::StateAttribute::OFF | osg::StateAttribute::OVERRIDE);
     }
 
-    // attach the overlay group to the camera. 
+    // attach the overlay group to the camera.
     // TODO: we should probably lock this since other cull traversals might be accessing the group
     //       while we are changing its children.
     params._rttCamera->addChild( params._group );
@@ -448,7 +448,7 @@ DrapingTechnique::setUpCamera(OverlayDecorator::TechRTTParams& params)
     // fire up the local per-view data:
     LocalPerViewData* local = new LocalPerViewData();
     params._techniqueData = local;
-    
+
 
     // Assemble the terrain shaders that will apply projective texturing.
     VirtualProgram* terrain_vp = VirtualProgram::getOrCreate(params._terrainStateSet);
@@ -511,14 +511,14 @@ DrapingTechnique::cullOverlayGroup(OverlayDecorator::TechRTTParams& params,
     if ( params._rttCamera.valid() )
     {
         // this xforms from clip [-1..1] to texture [0..1] space
-        static osg::Matrix s_scaleBiasMat = 
-            osg::Matrix::translate(1.0,1.0,1.0) * 
+        static osg::Matrix s_scaleBiasMat =
+            osg::Matrix::translate(1.0,1.0,1.0) *
             osg::Matrix::scale(0.5,0.5,0.5);
 
         // resolution weighting based on camera distance.
         if ( _maxFarNearRatio > 1.0 )
         {
-            optimizeProjectionMatrix( params, _maxFarNearRatio );
+//            optimizeProjectionMatrix( params, _maxFarNearRatio );
         }
 
         params._rttCamera->setViewMatrix      ( params._rttViewMatrix );
@@ -530,7 +530,7 @@ DrapingTechnique::cullOverlayGroup(OverlayDecorator::TechRTTParams& params,
 
         if ( local._texGenUniform.valid() )
         {
-            // premultiply the inv view matrix so we don't have precision problems in the shader 
+            // premultiply the inv view matrix so we don't have precision problems in the shader
             // (and it's faster too)
 
             // TODO:
@@ -586,7 +586,7 @@ DrapingTechnique::setOverlayBlending( bool value )
     if ( value != _rttBlending )
     {
         _rttBlending = value;
-        
+
         if ( _rttBlending )
             OE_INFO << LC << "Overlay blending " << (value?"enabled":"disabled")<< std::endl;
     }
