@@ -454,6 +454,7 @@ OverlayDecorator::cullTerrainAndCalculateRTTParams(osgUtil::CullVisitor* cv,
         if (_engine->getTerrain()->getHeight(geoSRS, geodetic.x(), geodetic.y(), &height)) // SpatialReference::create("epsg:4326"), osg::RadiansToDegrees( lon ), osg::RadiansToDegrees( lat ), &height))
         {
             geodetic.z() -= height;
+            R = eyeLen - geodetic.z();
         }
 
         if( hasl > 0 )
@@ -468,10 +469,7 @@ OverlayDecorator::cullTerrainAndCalculateRTTParams(osgUtil::CullVisitor* cv,
         // up vector tangent to the ellipsoid under the eye.
         worldUp = _ellipsoid->computeLocalUpVector(eye.x(), eye.y(), eye.z());
 
-        // radius of the earth under the eyepoint
-        // gw: wrong. use R instead.
-        double radius = eyeLen - geodetic.z();
-        horizonDistance = sqrt( 2.0*radius*fabs(hasl) + hasl*hasl );
+        horizonDistance = sqrt( 2.0*R*fabs(hasl) + hasl*hasl );
     }
     else // projected map
     {
@@ -613,7 +611,7 @@ OverlayDecorator::cullTerrainAndCalculateRTTParams(osgUtil::CullVisitor* cv,
     // Proj matrix.
 
     // For now: our RTT camera z range will be based on this equation:
-    double zspan = std::max(50000.0, hasl+25000.0);
+    double zspan = std::max(50000.0, fabs(hasl)+25000.0);
     osg::Vec3d up = camLook;
     if ( _isGeocentric )
     {
@@ -621,8 +619,15 @@ OverlayDecorator::cullTerrainAndCalculateRTTParams(osgUtil::CullVisitor* cv,
         //establish a valid up vector
         osg::Vec3d rttLook = -rttEye;
         rttLook.normalize();
-        if ( fabs(rttLook * camLook) > 0.9999 )
-            up.set( camUp );
+        double dot = rttLook * camLook;
+        if ( dot > 0.999 )
+        {
+             up.set( camUp );
+        }
+        else if ( dot < -0.999 )
+        {
+            up.set( -camUp );
+        }
 
         // do NOT look at (0,0,0); must look down the ellipsoid up vector.
         rttViewMatrix.makeLookAt( rttEye, rttEye-worldUp*zspan, up );
