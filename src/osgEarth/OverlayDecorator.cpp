@@ -211,13 +211,14 @@ namespace
     intersectClipRayWithPlane(double                   clipx,
                               double                   clipy,
                               const osg::Matrix&       clipToWorld,
+                              double                   R,
                               double&                  inout_maxDist2)
     {
         osg::Vec3d p0 = osg::Vec3d(clipx, clipy, -1.0) * clipToWorld; // near plane
         osg::Vec3d p1 = osg::Vec3d(clipx, clipy,  1.0) * clipToWorld; // far plane
 
         // zero-level plane is hard-coded here
-        osg::Vec3d planePoint(0,0,0);
+        osg::Vec3d planePoint(0,0,R);
         osg::Vec3d planeNormal(0,0,1);
 
         osg::Vec3d L = p1-p0;
@@ -424,14 +425,14 @@ OverlayDecorator::cullTerrainAndCalculateRTTParams(osgUtil::CullVisitor* cv,
     double eyeLen;
     osg::Vec3d worldUp;
 
-    // Radius at eyepoint (geocentric)
-    double R;
+    // Radius at eyepoint (geocentric), or height of plane (projected)
+    double R = 0.0;
 
     // height above sea level
     double hasl;
 
     // weight of the HASL value when calculating extent compensation
-    double haslWeight;
+//    double haslWeight;
 
     // approximate distance to the visible horizon
     double horizonDistance;
@@ -474,13 +475,31 @@ OverlayDecorator::cullTerrainAndCalculateRTTParams(osgUtil::CullVisitor* cv,
     else // projected map
     {
         hasl = eye.z();
-        hasl = osg::maximum( hasl, 100.0 );
+
+        if( hasl > 0 )
+        {
+            hasl = osg::maximum( hasl, 100.0 );
+        }
+        else
+        {
+            hasl = osg::minimum( hasl, -100.0 );
+        }
+
+        eyeLen = fabs(hasl) * 2.0;
+
+        //Actually sample the terrain to get the height of the plane for projection volume intersection later.
+        const SpatialReference* geoSRS = _engine->getTerrain()->getSRS();
+        double height;
+        if (_engine->getTerrain()->getHeight(geoSRS, eye.x(), eye.y(), &height)) // SpatialReference::create("epsg:4326"), osg::RadiansToDegrees( lon ), osg::RadiansToDegrees( lat ), &height))
+        {
+            R = height;
+        }
+
         worldUp.set( 0.0, 0.0, 1.0 );
-        eyeLen = hasl * 2.0;
 
         // there "horizon distance" in a projected map is infinity,
         // so just simulate one.
-        horizonDistance = sqrt(2.0*6356752.3142*hasl + hasl*hasl);
+        horizonDistance = sqrt(2.0*6356752.3142*fabs(hasl) + hasl*hasl);
     }
 
     // update the shared horizon distance.
@@ -576,11 +595,39 @@ OverlayDecorator::cullTerrainAndCalculateRTTParams(osgUtil::CullVisitor* cv,
     }
     else // projected
     {
-        intersectClipRayWithPlane( -1.0, 1.0, inverseMVP, maxDist2 );
-        if ( maxDist2 == 0.0 )
-            intersectClipRayWithPlane( 1.0, 1.0, inverseMVP, maxDist2 );
-        if ( maxDist2 == 0.0 )
-            intersectClipRayWithPlane( 0.0, 1.0, inverseMVP, maxDist2 );
+        double dist2;
+
+        dist2 = 0.0;
+        intersectClipRayWithPlane( -1.0, 1.0, inverseMVP, R, dist2 );
+        if( dist2 > 0 )
+        {
+            validint++;
+            if(dist2 > maxDist2) maxDist2 = dist2;
+        }
+
+        dist2 = 0.0;
+        intersectClipRayWithPlane( 1.0, 1.0, inverseMVP, R, dist2 );
+        if( dist2 > 0 )
+        {
+            validint++;
+            if(dist2 > maxDist2) maxDist2 = dist2;
+        }
+
+        dist2 = 0.0;
+        intersectClipRayWithPlane( -1.0, -1.0, inverseMVP, R, dist2 );
+        if( dist2 > 0 )
+        {
+            validint++;
+            if(dist2 > maxDist2) maxDist2 = dist2;
+        }
+
+        dist2 = 0.0;
+        intersectClipRayWithPlane( 1.0, -1.0, inverseMVP, R, dist2 );
+        if( dist2 > 0 )
+        {
+            validint++;
+            if(dist2 > maxDist2) maxDist2 = dist2;
+        }
     }
 
     // clamp down the far plane:
@@ -635,10 +682,18 @@ OverlayDecorator::cullTerrainAndCalculateRTTParams(osgUtil::CullVisitor* cv,
     else
     {
         osg::Vec3d rttLook(0, 0, -1);
-        if ( fabs(rttLook * camLook) > 0.9999 )
-            up.set( camUp );
+        double dot = rttLook * camLook;
+        if ( dot > 0.999 )
+        {
+             up.set( camUp );
+        }
+        else if ( dot < -0.999 )
+        {
+            up.set( -camUp );
+        }
 
-        rttViewMatrix.makeLookAt( camEye + worldUp*zspan, camEye - worldUp*zspan, up );
+        osg::Vec3 camref = osg::Vec3(camEye.x(), camEye.y(), fabs(camEye.z()));
+        rttViewMatrix.makeLookAt(  camref + worldUp*zspan, camref - worldUp*zspan, up );
     }
 
     // Build a polyhedron for the new frustum so we can slice it.
