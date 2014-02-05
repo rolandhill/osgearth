@@ -489,8 +489,8 @@ OverlayDecorator::cullTerrainAndCalculateRTTParams(osgUtil::CullVisitor* cv,
     pvd._sharedHorizonDistance = horizonDistance;
 
     // create a "weighting" that weights HASL against the camera's pitch.
-    osg::Vec3d lookVector = cv->getLookVectorLocal();
-    haslWeight = osg::absolute(worldUp * lookVector);
+//    osg::Vec3d lookVector = cv->getLookVectorLocal();
+//    haslWeight = osg::absolute(worldUp * lookVector);
 
     // unit look-vector of the eye:
     osg::Vec3d camEye, camTo, camUp;
@@ -544,10 +544,37 @@ OverlayDecorator::cullTerrainAndCalculateRTTParams(osgUtil::CullVisitor* cv,
 
     // constrain the far plane.
     // intersect the top corners of the projection volume since those are the farthest.
+    int validint = 0;
     if ( _isGeocentric )
     {
-        intersectClipRayWithSphere( -1.0, 1.0, inverseMVP, R, maxDist2 );
-        intersectClipRayWithSphere(  1.0, 1.0, inverseMVP, R, maxDist2 );
+        double dist2;
+        dist2 = 0.0;
+        if( intersectClipRayWithSphere( -1.0, 1.0, inverseMVP, R, dist2 ) )
+        {
+            validint++;
+            if(dist2 > maxDist2) maxDist2 = dist2;
+        }
+
+        dist2 = 0.0;
+        if( intersectClipRayWithSphere( 1.0, 1.0, inverseMVP, R, dist2 ) )
+        {
+            validint++;
+            if(dist2 > maxDist2) maxDist2 = dist2;
+        }
+
+        dist2 = 0.0;
+        if( intersectClipRayWithSphere( -1.0, -1.0, inverseMVP, R, dist2 ) )
+        {
+            validint++;
+            if(dist2 > maxDist2) maxDist2 = dist2;
+        }
+
+        dist2 = 0.0;
+        if( intersectClipRayWithSphere( 1.0, -1.0, inverseMVP, R, dist2 ) )
+        {
+            validint++;
+            if(dist2 > maxDist2) maxDist2 = dist2;
+        }
     }
     else // projected
     {
@@ -559,7 +586,8 @@ OverlayDecorator::cullTerrainAndCalculateRTTParams(osgUtil::CullVisitor* cv,
     }
 
     // clamp down the far plane:
-    if ( maxDist2 != 0.0 )
+    // only if the entire projection volume intersects the map - R Hill
+    if ( validint == 4 && maxDist2 != 0.0)
     {
         maxFar = std::min( zNear+sqrt(maxDist2), maxFar );
     }
