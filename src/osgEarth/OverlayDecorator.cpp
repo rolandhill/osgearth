@@ -662,7 +662,12 @@ OverlayDecorator::cullTerrainAndCalculateRTTParams(osgUtil::CullVisitor* cv,
     osg::Vec3d up = camLook;
     if ( _isGeocentric )
     {
-        osg::Vec3d rttEye = eye+worldUp*zspan;
+        osg::Vec3d camref = camEye;
+        if( hasl < 0 )
+        {
+            camref = camEye - worldUp * 2.0 * hasl;
+        }
+        osg::Vec3d rttEye = camref+worldUp*zspan;
         //establish a valid up vector
         osg::Vec3d rttLook = -rttEye;
         rttLook.normalize();
@@ -692,7 +697,7 @@ OverlayDecorator::cullTerrainAndCalculateRTTParams(osgUtil::CullVisitor* cv,
             up.set( -camUp );
         }
 
-        osg::Vec3 camref = osg::Vec3(camEye.x(), camEye.y(), fabs(camEye.z()));
+        osg::Vec3d camref = osg::Vec3d(camEye.x(), camEye.y(), fabs(camEye.z()));
         rttViewMatrix.makeLookAt(  camref + worldUp*zspan, camref - worldUp*zspan, up );
     }
 
