@@ -88,11 +88,11 @@ _terrainEngineDriver( "mp" )
     osgDB::Registry::instance()->addMimeTypeExtensionMapping( "text/json",                            "osgb" );
     osgDB::Registry::instance()->addMimeTypeExtensionMapping( "text/x-json",                          "osgb" );
     osgDB::Registry::instance()->addMimeTypeExtensionMapping( "image/jpg",                            "jpg" );
-    
+
     // pre-load OSG's ZIP plugin so that we can use it in URIs
     std::string zipLib = osgDB::Registry::instance()->createLibraryNameForExtension( "zip" );
     if ( !zipLib.empty() )
-        osgDB::Registry::instance()->loadLibrary( zipLib );    
+        osgDB::Registry::instance()->loadLibrary( zipLib );
 
     // set up our default r/w options to NOT cache archives!
     _defaultOptions = new osgDB::Options();
@@ -171,13 +171,13 @@ Registry::~Registry()
     //nop
 }
 
-Registry* 
+Registry*
 Registry::instance(bool erase)
 {
     static osg::ref_ptr<Registry> s_registry = new Registry;
 
-    if (erase) 
-    {   
+    if (erase)
+    {
         s_registry->destruct();
         s_registry = 0;
     }
@@ -185,7 +185,7 @@ Registry::instance(bool erase)
     return s_registry.get(); // will return NULL on erase
 }
 
-void 
+void
 Registry::destruct()
 {
     _cache = 0L;
@@ -206,7 +206,7 @@ Registry::getGlobalGeodeticProfile() const
 {
     if ( !_global_geodetic_profile.valid() )
     {
-        GDAL_SCOPED_LOCK;
+//        GDAL_SCOPED_LOCK;
 
         if ( !_global_geodetic_profile.valid() ) // double-check pattern
         {
@@ -233,7 +233,7 @@ Registry::getSphericalMercatorProfile() const
 {
     if ( !_spherical_mercator_profile.valid() )
     {
-        GDAL_SCOPED_LOCK;
+//        GDAL_SCOPED_LOCK;
 
         if ( !_spherical_mercator_profile.valid() ) // double-check pattern
         {
@@ -256,7 +256,7 @@ Registry::getCubeProfile() const
 {
     if ( !_cube_profile.valid() )
     {
-        GDAL_SCOPED_LOCK;
+//        GDAL_SCOPED_LOCK;
 
         if ( !_cube_profile.valid() ) // double-check pattern
         {
@@ -306,7 +306,7 @@ Registry::getCachePolicy( optional<CachePolicy>& cp, const osgDB::Options* optio
         // if there is a system-wide override in place, use it.
         cp = overrideCachePolicy().value();
     }
-    else 
+    else
     {
         // Try to read the cache policy from the db-options
         CachePolicy::fromOptions( options, cp );
@@ -403,17 +403,17 @@ Registry::setShaderFactory( ShaderFactory* lib )
     if ( lib != 0L && lib != _shaderLib.get() )
         _shaderLib = lib;
 }
-        
+
 void
-Registry::setURIReadCallback( URIReadCallback* callback ) 
-{ 
+Registry::setURIReadCallback( URIReadCallback* callback )
+{
     _uriReadCallback = callback;
 }
 
 URIReadCallback*
 Registry::getURIReadCallback() const
 {
-    return _uriReadCallback.get(); 
+    return _uriReadCallback.get();
 }
 
 void
@@ -441,8 +441,8 @@ Registry::createUID()
 osgDB::Options*
 Registry::cloneOrCreateOptions( const osgDB::Options* input ) const
 {
-    osgDB::Options* newOptions = 
-        input ? static_cast<osgDB::Options*>(input->clone(osg::CopyOp::SHALLOW_COPY)) : 
+    osgDB::Options* newOptions =
+        input ? static_cast<osgDB::Options*>(input->clone(osg::CopyOp::SHALLOW_COPY)) :
         new osgDB::Options();
 
     // clear the CACHE_ARCHIVES flag because it is evil

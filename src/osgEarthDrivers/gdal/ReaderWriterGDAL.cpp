@@ -40,6 +40,11 @@
 
 #include "GDALOptions"
 
+OpenThreads::ReentrantMutex gdal_ds_mutex;
+
+#define GDAL_DS_SCOPED_LOCK \
+    OpenThreads::ScopedLock<OpenThreads::ReentrantMutex> _slock( gdal_ds_mutex )\
+
 #define LC "[GDAL driver] "
 
 // From easyrgb.com
@@ -158,7 +163,7 @@ getFiles(const std::string &file, const std::vector<std::string> &exts, const st
 				break;
 			}
 		}
-        
+
         if (fileValid)
         {
           files.push_back(osgDB::convertFileNameToNativeStyle(file));
@@ -227,13 +232,13 @@ build_vrt(std::vector<std::string> &files, ResolutionStrategy resolutionStrategy
         {
             const char* proj = GDALGetProjectionRef(hDS);
             if (!proj || strlen(proj) == 0)
-            {                
+            {
                 std::string prjLocation = osgDB::getNameLessExtension( std::string(dsFileName) ) + std::string(".prj");
                 ReadResult r = URI(prjLocation).readString();
                 if ( r.succeeded() )
                 {
                     proj = CPLStrdup( r.getString().c_str() );
-                }                
+                }
             }
 
             GDALGetGeoTransform(hDS, psDatasetProperties[i].adfGeoTransform);
@@ -378,27 +383,27 @@ build_vrt(std::vector<std::string> &files, ResolutionStrategy resolutionStrategy
             fprintf( stderr, "Warning : can't open %s. Skipping it\n", dsFileName);
         }
     }
-    
+
     if (nCount == 0)
         goto end;
-    
+
     if (resolutionStrategy == AVERAGE_RESOLUTION)
     {
         we_res /= nCount;
         ns_res /= nCount;
     }
-    
+
     rasterXSize = (int)(0.5 + (maxX - minX) / we_res);
     rasterYSize = (int)(0.5 + (maxY - minY) / -ns_res);
-    
+
     hVRTDS = VRTCreate(rasterXSize, rasterYSize);
-    
+
     if (projectionRef)
     {
         //OE_NOTICE << "Setting projection to " << projectionRef << std::endl;
         GDALSetProjection(hVRTDS, projectionRef);
     }
-    
+
     double adfGeoTransform[6];
     adfGeoTransform[GEOTRSFRM_TOPLEFT_X] = minX;
     adfGeoTransform[GEOTRSFRM_WE_RES] = we_res;
@@ -407,7 +412,7 @@ build_vrt(std::vector<std::string> &files, ResolutionStrategy resolutionStrategy
     adfGeoTransform[GEOTRSFRM_ROTATION_PARAM2] = 0;
     adfGeoTransform[GEOTRSFRM_NS_RES] = ns_res;
     GDALSetGeoTransform(hVRTDS, adfGeoTransform);
-    
+
     for(j=0;j<nBands;j++)
     {
         GDALRasterBandH hBand;
@@ -628,12 +633,12 @@ public:
       _warpedDS(NULL),
       _options(options),
       _maxDataLevel(30)
-    {    
+    {
     }
 
     virtual ~GDALTileSource()
-    {                     
-        GDAL_SCOPED_LOCK;
+    {
+        GDAL_DS_SCOPED_LOCK;
 
         // Close the _warpedDS dataset if :
         // - it exists
@@ -645,11 +650,11 @@ public:
 
         // Close the _srcDS dataset if :
         // - it exists
-        // - and : 
+        // - and :
         //    -    is different from external dataset
         //    - or is equal to external dataset, but the tile source owns the external dataset
         if (_srcDS)
-        {     
+        {
             bool needClose = true;
             osg::ref_ptr<GDALOptions::ExternalDataset> pExternalDataset = _options.externalDataset();
             if (pExternalDataset != NULL)
@@ -669,7 +674,7 @@ public:
 
 
     Status initialize( const osgDB::Options* dbOptions )
-    {           
+    {
         GDAL_SCOPED_LOCK;
 
         Cache* cache = 0;
@@ -684,7 +689,7 @@ public:
             {
                 Config optionsConf = _options.getConfig();
 
-                std::string binId = Stringify() << std::hex << hashString(optionsConf.toJSON());                
+                std::string binId = Stringify() << std::hex << hashString(optionsConf.toJSON());
                 _cacheBin = cache->addBin( binId );
 
                 if ( _cacheBin.valid() )
@@ -692,7 +697,7 @@ public:
                     _cacheBin->apply( _dbOptions.get() );
                 }
             }
-        }  
+        }
 
         // Is a valid external GDAL dataset specified ?
         bool useExternalDataset = false;
@@ -714,14 +719,14 @@ public:
 
         // source connection:
         std::string source;
-        
+
         if ( _options.url().isSet() )
             source = _options.url()->full();
         else if ( _options.connection().isSet() )
             source = _options.connection().value();
 
         //URI uri = _options.url().value();
-        
+
         if (useExternalDataset == false)
         {
             std::vector<std::string> files;
@@ -772,13 +777,13 @@ public:
 
                 //Get the GDAL VRT driver
                 GDALDriver* vrtDriver = (GDALDriver*)GDALGetDriverByName("VRT");
-                
+
                 //Try to load the VRT file from the cache so we don't have to build it each time.
                 if (_cacheBin.valid())
-                {                
+                {
                     ReadResult result = _cacheBin->readString( vrtKey, 0 );
                     if (result.succeeded())
-                    {                        
+                    {
                         _srcDS = (GDALDataset*)GDALOpen(result.getString().c_str(), GA_ReadOnly );
                         if (_srcDS)
                         {
@@ -789,11 +794,11 @@ public:
 
                 //Build the dataset if we didn't already load it
                 if (!_srcDS)
-                {                 
+                {
                     //We couldn't get the VRT from the cache, so build it
-                    osg::Timer_t startTime = osg::Timer::instance()->tick();                    
+                    osg::Timer_t startTime = osg::Timer::instance()->tick();
                     _srcDS = (GDALDataset*)build_vrt(files, HIGHEST_RESOLUTION);
-                    osg::Timer_t endTime = osg::Timer::instance()->tick();                                                            
+                    osg::Timer_t endTime = osg::Timer::instance()->tick();
                     OE_INFO << LC << "Built VRT in " << osg::Timer::instance()->delta_s(startTime, endTime) << " s" << std::endl;
 
                     if (_srcDS)
@@ -803,24 +808,24 @@ public:
                         {
                             std::string vrtFile = getTempName( "", ".vrt");
                             OE_INFO << "Writing temp VRT to " << vrtFile << std::endl;
-                         
+
                             if (vrtDriver)
-                            {                    
-                                vrtDriver->CreateCopy(vrtFile.c_str(), _srcDS, 0, 0, 0, 0 );                                                        
+                            {
+                                vrtDriver->CreateCopy(vrtFile.c_str(), _srcDS, 0, 0, 0, 0 );
 
 
-                                //We created the temp file, now read the contents back                            
+                                //We created the temp file, now read the contents back
                                 std::ifstream input( vrtFile.c_str() );
                                 if ( input.is_open() )
                                 {
                                     input >> std::noskipws;
                                     std::stringstream buf;
-                                    buf << input.rdbuf();                                
-                                    std::string vrtContents = buf.str();                                
+                                    buf << input.rdbuf();
+                                    std::string vrtContents = buf.str();
                                     osg::ref_ptr< StringObject > strObject = new StringObject( vrtContents );
                                     _cacheBin->write( vrtKey, strObject.get() );
                                 }
-                            }                                                
+                            }
                             if (osgDB::fileExists( vrtFile ) )
                             {
                                 remove( vrtFile.c_str() );
@@ -834,7 +839,7 @@ public:
                 }
             }
             else
-            {            
+            {
                 //If we couldn't build a VRT, just try opening the file directly
                 //Open the dataset
                 _srcDS = (GDALDataset*)GDALOpen( files[0].c_str(), GA_ReadOnly );
@@ -847,7 +852,7 @@ public:
                     //OE_NOTICE << "There are " << numSubDatasets << " in this file " << std::endl;
 
                     if (numSubDatasets > 0)
-                    {            
+                    {
                         int subDataset = _options.subDataSet().isSet() ? *_options.subDataSet() : 1;
                         if (subDataset < 1 || subDataset > numSubDatasets) subDataset = 1;
                         std::stringstream buf;
@@ -890,10 +895,10 @@ public:
         //Create a spatial reference for the source.
         std::string srcProj = _srcDS->GetProjectionRef();
 
-        
+
         if ( !srcProj.empty() && getProfile() != 0L )
         {
-            OE_WARN << LC << "WARNING, overriding profile of a source that already defines its own SRS (" 
+            OE_WARN << LC << "WARNING, overriding profile of a source that already defines its own SRS ("
                 << this->getName() << ")" << std::endl;
         }
 
@@ -906,7 +911,7 @@ public:
         {
             src_srs = SpatialReference::create( srcProj );
         }
-        
+
         // assert SRS is present
         if ( !src_srs.valid() )
         {
@@ -928,7 +933,7 @@ public:
 
         //Get the initial geotransform
         _srcDS->GetGeoTransform(_geotransform);
-        
+
         bool hasGCP = _srcDS->GetGCPCount() > 0 && _srcDS->GetGCPProjection();
         bool isRotated = _geotransform[2] != 0.0 || _geotransform[4];
         if (hasGCP) OE_DEBUG << LC << source << " has GCP georeferencing" << std::endl;
@@ -978,7 +983,7 @@ public:
                     NULL);
             }
             else
-            {                                
+            {
                 _warpedDS = (GDALDataset*)GDALAutoCreateWarpedVRT(
                     _srcDS,
                     src_srs->getWKT().c_str(),
@@ -995,7 +1000,7 @@ public:
         }
         else
         {
-            _warpedDS = _srcDS;            
+            _warpedDS = _srcDS;
             warpedSRSWKT = src_srs->getWKT();
         }
 
@@ -1034,7 +1039,7 @@ public:
 
             minX = osg::minimum( ll_lon, osg::minimum( ul_lon, osg::minimum( ur_lon, lr_lon ) ) );
             maxX = osg::maximum( ll_lon, osg::maximum( ul_lon, osg::maximum( ur_lon, lr_lon ) ) );
-            
+
             if ( src_srs->isNorthPolar() )
             {
                 minY = osg::minimum( ll_lat, osg::minimum( ul_lat, osg::minimum( ur_lat, lr_lat ) ) );
@@ -1056,11 +1061,11 @@ public:
 
         if ( !profile )
         {
-            profile = Profile::create( 
+            profile = Profile::create(
                 warpedSRSWKT,
                 minX, minY, maxX, maxY);
 
-            OE_INFO << LC << "" << source << " is projected, SRS = " 
+            OE_INFO << LC << "" << source << " is projected, SRS = "
                 << warpedSRSWKT << std::endl;
                 //<< _warpedDS->GetProjectionRef() << std::endl;
         }
@@ -1113,11 +1118,11 @@ public:
 
 
     /**
-    * Finds a raster band based on color interpretation 
+    * Finds a raster band based on color interpretation
     */
     static GDALRasterBand* findBandByColorInterp(GDALDataset *ds, GDALColorInterp colorInterp)
     {
-        GDAL_SCOPED_LOCK;
+        GDAL_DS_SCOPED_LOCK;
 
         for (int i = 1; i <= ds->GetRasterCount(); ++i)
         {
@@ -1128,7 +1133,7 @@ public:
 
     static GDALRasterBand* findBandByDataType(GDALDataset *ds, GDALDataType dataType)
     {
-        GDAL_SCOPED_LOCK;
+        GDAL_DS_SCOPED_LOCK;
 
         for (int i = 1; i <= ds->GetRasterCount(); ++i)
         {
@@ -1182,7 +1187,7 @@ public:
                 float R, G, B;
                 if ( S == 0 )                       //HSL values = 0 - 1
                 {
-                    R = L;                      //RGB results = 0 - 1 
+                    R = L;                      //RGB results = 0 - 1
                     G = L;
                     B = L;
                 }
@@ -1198,8 +1203,8 @@ public:
 
                     R = Hue_2_RGB( var_1, var_2, H + ( 1 / 3 ) );
                     G = Hue_2_RGB( var_1, var_2, H );
-                    B = Hue_2_RGB( var_1, var_2, H - ( 1 / 3 ) );                                
-                } 
+                    B = Hue_2_RGB( var_1, var_2, H - ( 1 / 3 ) );
+                }
                 color.r() = static_cast<unsigned char>(R*255.0f);
                 color.g() = static_cast<unsigned char>(G*255.0f);
                 color.b() = static_cast<unsigned char>(B*255.0f);
@@ -1222,9 +1227,9 @@ public:
     }
 
     void geoToPixel(double geoX, double geoY, double &x, double &y)
-    {                
+    {
         x = _invtransform[0] + _invtransform[1] * geoX + _invtransform[2] * geoY;
-        y = _invtransform[3] + _invtransform[4] * geoX + _invtransform[5] * geoY;                
+        y = _invtransform[3] + _invtransform[4] * geoX + _invtransform[5] * geoY;
 
          //Account for slight rounding errors.  If we are right on the edge of the dataset, clamp to the edge
         double eps = 0.0001;
@@ -1240,12 +1245,12 @@ public:
     {
         if (key.getLevelOfDetail() > _maxDataLevel)
         {
-            OE_DEBUG << LC << "" << getName() << ": Reached maximum data resolution key=" 
+            OE_DEBUG << LC << "" << getName() << ": Reached maximum data resolution key="
                 << key.getLevelOfDetail() << " max=" << _maxDataLevel <<  std::endl;
             return NULL;
         }
 
-        GDAL_SCOPED_LOCK;
+        GDAL_DS_SCOPED_LOCK;
 
         int tileSize = _options.tileSize().value();
 
@@ -1258,12 +1263,12 @@ public:
 
             // Compute the intersection of the incoming key with the data extents of the dataset
             osgEarth::GeoExtent intersection = key.getExtent().intersectionSameSRS( _extents );
-            
+
             // Determine the read window
             double src_min_x, src_min_y, src_max_x, src_max_y;
             // Get the pixel coordiantes of the intersection
             geoToPixel( intersection.xMin(), intersection.yMax(), src_min_x, src_min_y);
-            geoToPixel( intersection.xMax(), intersection.yMin(), src_max_x, src_max_y);   
+            geoToPixel( intersection.xMax(), intersection.yMin(), src_max_x, src_max_y);
 
             // Convert the doubles to integers.  We floor the mins and ceil the maximums to give the widest window possible.
             src_min_x = floor(src_min_x);
@@ -1274,7 +1279,7 @@ public:
             int off_x = (int)( src_min_x );
             int off_y = (int)( src_min_y );
             int width  = (int)(src_max_x - src_min_x);
-            int height = (int)(src_max_y - src_min_y);      
+            int height = (int)(src_max_y - src_min_y);
 
 
             int rasterWidth = _warpedDS->GetRasterXSize();
@@ -1284,10 +1289,10 @@ public:
                 OE_WARN << LC << "Read window outside of bounds of dataset.  Source Dimensions=" << rasterWidth << "x" << rasterHeight << " Read Window=" << off_x << ", " << off_y << " " << width << "x" << height << std::endl;
             }
 
-            // Determine the destination window            
+            // Determine the destination window
 
             // Compute the offsets in geo coordinates of the intersection from the TileKey
-            double offset_left = intersection.xMin() - xmin;            
+            double offset_left = intersection.xMin() - xmin;
             double offset_top = ymax - intersection.yMax();
 
 
@@ -1295,20 +1300,20 @@ public:
             int target_height = (int)ceil((intersection.height() / key.getExtent().height())*(double)tileSize);
             int tile_offset_left = (int)floor((offset_left / key.getExtent().width()) * (double)tileSize);
             int tile_offset_top = (int)floor((offset_top / key.getExtent().height()) * (double)tileSize);
-            
+
             // Compute spacing
-            double dx       = (xmax - xmin) / (tileSize-1); 
-            double dy       = (ymax - ymin) / (tileSize-1); 
+            double dx       = (xmax - xmin) / (tileSize-1);
+            double dy       = (ymax - ymin) / (tileSize-1);
 
             OE_DEBUG << LC << "ReadWindow " << off_x << "," << off_y << " " << width << "x" << height << std::endl;
-            OE_DEBUG << LC << "DestWindow " << tile_offset_left << "," << tile_offset_top << " " << target_width << "x" << target_height << std::endl;                        
+            OE_DEBUG << LC << "DestWindow " << tile_offset_left << "," << tile_offset_top << " " << target_width << "x" << target_height << std::endl;
 
 
             //Return if parameters are out of range.
             if (width <= 0 || height <= 0 || target_width <= 0 || target_height <= 0)
             {
                 return 0;
-            }            
+            }
 
 
 
@@ -1399,14 +1404,14 @@ public:
                             unsigned char a = alpha[src_col + src_row * target_width];
                             *(image->data(dst_col, dst_row) + 0) = r;
                             *(image->data(dst_col, dst_row) + 1) = g;
-                            *(image->data(dst_col, dst_row) + 2) = b;                            
+                            *(image->data(dst_col, dst_row) + 2) = b;
                             if (!isValidValue( r, bandRed)    ||
-                                !isValidValue( g, bandGreen)  || 
+                                !isValidValue( g, bandGreen)  ||
                                 !isValidValue( b, bandBlue)   ||
                                 (bandAlpha && !isValidValue( a, bandAlpha )))
                             {
                                 a = 0.0f;
-                            }                            
+                            }
                             *(image->data(dst_col, dst_row) + 3) = a;
                         }
                     }
@@ -1418,17 +1423,17 @@ public:
                     //Sample each point exactly
                     for (unsigned int c = 0; c < (unsigned int)tileSize; ++c)
                     {
-                        double geoX = xmin + (dx * (double)c); 
+                        double geoX = xmin + (dx * (double)c);
                         for (unsigned int r = 0; r < (unsigned int)tileSize; ++r)
                         {
-                            double geoY = ymin + (dy * (double)r); 
-                            *(image->data(c,r) + 0) = (unsigned char)getInterpolatedValue(bandRed,  geoX,geoY,false); 
-                            *(image->data(c,r) + 1) = (unsigned char)getInterpolatedValue(bandGreen,geoX,geoY,false); 
-                            *(image->data(c,r) + 2) = (unsigned char)getInterpolatedValue(bandBlue, geoX,geoY,false); 
-                            if (bandAlpha != NULL) 
-                                *(image->data(c,r) + 3) = (unsigned char)getInterpolatedValue(bandAlpha,geoX, geoY, false); 
-                            else 
-                                *(image->data(c,r) + 3) = 255; 
+                            double geoY = ymin + (dy * (double)r);
+                            *(image->data(c,r) + 0) = (unsigned char)getInterpolatedValue(bandRed,  geoX,geoY,false);
+                            *(image->data(c,r) + 1) = (unsigned char)getInterpolatedValue(bandGreen,geoX,geoY,false);
+                            *(image->data(c,r) + 2) = (unsigned char)getInterpolatedValue(bandBlue, geoX,geoY,false);
+                            if (bandAlpha != NULL)
+                                *(image->data(c,r) + 3) = (unsigned char)getInterpolatedValue(bandAlpha,geoX, geoY, false);
+                            else
+                                *(image->data(c,r) + 3) = 255;
                         }
                     }
                 }
@@ -1472,7 +1477,7 @@ public:
                             unsigned char a = alpha[src_col + src_row * target_width];
                             *(image->data(dst_col, dst_row) + 0) = g;
                             *(image->data(dst_col, dst_row) + 1) = g;
-                            *(image->data(dst_col, dst_row) + 2) = g;                            
+                            *(image->data(dst_col, dst_row) + 2) = g;
                             if (!isValidValue( g, bandGray) ||
                                (bandAlpha && !isValidValue( a, bandAlpha)))
                             {
@@ -1486,22 +1491,22 @@ public:
                 }
                 else
                 {
-                    for (int c = 0; c < tileSize; ++c) 
-                    { 
-                        double geoX = xmin + (dx * (double)c); 
+                    for (int c = 0; c < tileSize; ++c)
+                    {
+                        double geoX = xmin + (dx * (double)c);
 
-                        for (int r = 0; r < tileSize; ++r) 
-                        { 
-                            double geoY   = ymin + (dy * (double)r); 
-                            float  color = getInterpolatedValue(bandGray,geoX,geoY,false); 
+                        for (int r = 0; r < tileSize; ++r)
+                        {
+                            double geoY   = ymin + (dy * (double)r);
+                            float  color = getInterpolatedValue(bandGray,geoX,geoY,false);
 
-                            *(image->data(c,r) + 0) = (unsigned char)color; 
-                            *(image->data(c,r) + 1) = (unsigned char)color; 
-                            *(image->data(c,r) + 2) = (unsigned char)color; 
-                            if (bandAlpha != NULL) 
-                                *(image->data(c,r) + 3) = (unsigned char)getInterpolatedValue(bandAlpha,geoX,geoY,false); 
-                            else 
-                                *(image->data(c,r) + 3) = 255; 
+                            *(image->data(c,r) + 0) = (unsigned char)color;
+                            *(image->data(c,r) + 1) = (unsigned char)color;
+                            *(image->data(c,r) + 2) = (unsigned char)color;
+                            if (bandAlpha != NULL)
+                                *(image->data(c,r) + 3) = (unsigned char)getInterpolatedValue(bandAlpha,geoX,geoY,false);
+                            else
+                                *(image->data(c,r) + 3) = 255;
                         }
                     }
                 }
@@ -1530,10 +1535,10 @@ public:
                         src_col < target_width;
                         ++src_col, ++dst_col)
                     {
-                        
+
                         unsigned char p = palette[src_col + src_row * target_width];
                         osg::Vec4ub color;
-                        getPalleteIndexColor( bandPalette, p, color );                        
+                        getPalleteIndexColor( bandPalette, p, color );
                         if (!isValidValue( p, bandPalette))
                         {
                             color.a() = 0.0f;
@@ -1553,7 +1558,7 @@ public:
             }
             else
             {
-                OE_WARN 
+                OE_WARN
                     << LC << "Could not find red, green and blue bands or gray bands in "
                     << _options.url()->full()
                     << ".  Cannot create image. " << std::endl;
@@ -1578,7 +1583,7 @@ public:
 
     bool isValidValue(float v, GDALRasterBand* band)
     {
-        GDAL_SCOPED_LOCK;
+        GDAL_DS_SCOPED_LOCK;
 
         float bandNoData = -32767.0f;
         int success;
@@ -1591,7 +1596,7 @@ public:
         //Check to see if the value is equal to the bands specified no data
         if (bandNoData == v) return false;
         //Check to see if the value is equal to the user specified nodata value
-        if (getNoDataValue() == v) return false;        
+        if (getNoDataValue() == v) return false;
 
         //Check to see if the user specified a custom min/max
         if (v < getNoDataMinValue()) return false;
@@ -1608,8 +1613,8 @@ public:
     float getInterpolatedValue(GDALRasterBand *band, double x, double y, bool applyOffset=true)
     {
         double r, c;
-        geoToPixel( x, y, c, r );        
-       
+        geoToPixel( x, y, c, r );
+
 
         if (applyOffset)
         {
@@ -1739,7 +1744,7 @@ public:
             return NULL;
         }
 
-        GDAL_SCOPED_LOCK;
+        GDAL_DS_SCOPED_LOCK;
 
         int tileSize = _options.tileSize().value();
 

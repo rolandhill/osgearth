@@ -146,7 +146,7 @@ ImageLayerOptions::getConfig( bool isolate ) const
     conf.updateIfSet("min_filter","NEAREST",               _minFilter,osg::Texture::NEAREST);
     conf.updateIfSet("min_filter","NEAREST_MIPMAP_LINEAR", _minFilter,osg::Texture::NEAREST_MIPMAP_LINEAR);
     conf.updateIfSet("min_filter","NEAREST_MIPMAP_NEAREST",_minFilter,osg::Texture::NEAREST_MIPMAP_NEAREST);
-    
+
     return conf;
 }
 
@@ -163,7 +163,7 @@ namespace
 
         ImageLayerTileProcessor _processor;
     };
-    
+
     struct ApplyChromaKey
     {
         osg::Vec4f _chromaKey;
@@ -184,7 +184,7 @@ ImageLayerTileProcessor::ImageLayerTileProcessor(const ImageLayerOptions& option
 
 void
 ImageLayerTileProcessor::init(const ImageLayerOptions& options,
-                              const osgDB::Options*    dbOptions, 
+                              const osgDB::Options*    dbOptions,
                               bool                     layerInTargetProfile )
 {
     _options = options;
@@ -241,12 +241,12 @@ ImageLayerTileProcessor::process( osg::ref_ptr<osg::Image>& image ) const
             // if the image doesn't have an alpha channel, we must convert it to
             // a format that does before continuing.
             image = ImageUtils::convertToRGBA8( image.get() );
-        }           
+        }
 
         ImageUtils::PixelVisitor<ApplyChromaKey> applyChroma;
         applyChroma._chromaKey = _chromaKey;
         applyChroma.accept( image.get() );
-    }    
+    }
 }
 
 //------------------------------------------------------------------------
@@ -289,7 +289,7 @@ void
 ImageLayer::removeCallback( ImageLayerCallback* cb )
 {
     ImageLayerCallbackList::iterator i = std::find( _callbacks.begin(), _callbacks.end(), cb );
-    if ( i != _callbacks.end() ) 
+    if ( i != _callbacks.end() )
         _callbacks.erase( i );
 }
 
@@ -314,7 +314,7 @@ ImageLayer::fireCallback( ImageLayerCallbackMethodPtr method )
 }
 
 void
-ImageLayer::setOpacity( float value ) 
+ImageLayer::setOpacity( float value )
 {
     _runtimeOptions.opacity() = osg::clampBetween( value, 0.0f, 1.0f );
     fireCallback( &ImageLayerCallback::onOpacityChanged );
@@ -359,7 +359,7 @@ ImageLayer::getColorFilters() const
     return _runtimeOptions.colorFilters();
 }
 
-void 
+void
 ImageLayer::disableLODBlending()
 {
     _runtimeOptions.lodBlending() = false;
@@ -388,7 +388,7 @@ ImageLayer::initTileSource()
 void
 ImageLayer::initPreCacheOp()
 {
-    bool layerInTargetProfile = 
+    bool layerInTargetProfile =
         _targetProfileHint.valid() &&
         getProfile()               &&
         _targetProfileHint->isEquivalentTo( getProfile() );
@@ -445,7 +445,7 @@ ImageLayer::createImageInNativeProfile( const TileKey& key, ProgressCallback* pr
         //OE_INFO << "KEY = " << key.str() << ":" << std::endl;
         //for(int i=0; i<nativeKeys.size(); ++i)
         //    OE_INFO << "    " << nativeKeys[i].str() << std::endl;
-        
+
         // build a mosaic of the images from the native profile keys:
         bool foundAtLeastOneRealTile = false;
 
@@ -480,8 +480,8 @@ ImageLayer::createImageInNativeProfile( const TileKey& key, ProgressCallback* pr
             double rxmin, rymin, rxmax, rymax;
             mosaic.getExtents( rxmin, rymin, rxmax, rymax );
 
-            GeoImage result( 
-                mosaic.createImage(), 
+            GeoImage result(
+                mosaic.createImage(),
                 GeoExtent( nativeProfile->getSRS(), rxmin, rymin, rxmax, rymax ) );
 
 #if 1
@@ -600,7 +600,7 @@ ImageLayer::createImageInKeyProfile( const TileKey& key, ProgressCallback* progr
         //    OE_INFO << LC << getName() << " : " << key.str() << " record expired!" << std::endl;
         //}
     }
-    
+
     // The data was not in the cache. If we are cache-only, fail sliently
     if ( isCacheOnly() )
     {
@@ -622,7 +622,7 @@ ImageLayer::createImageInKeyProfile( const TileKey& key, ProgressCallback* progr
         //     then the low res data needs to "fallback" from LOD 4 - 22 so you can display the high res inset.  If you don't cache these intermediate tiles then
         //     performance can suffer generating all those fallback tiles, especially if you have to do reprojection or mosaicing.
         //!out_isFallback &&
-        cacheBin        && 
+        cacheBin        &&
         getCachePolicy().isCacheWriteable() )
     {
         if ( key.getExtent() != result.getExtent() )
@@ -655,7 +655,7 @@ ImageLayer::createImageFromTileSource(const TileKey&    key,
                                       bool&             out_isFallback)
 {
     // Results:
-    // 
+    //
     // * return an osg::Image matching the key extent is all goes well;
     //
     // * return NULL to indicate that the key exceeds the maximum LOD of the source data,
@@ -734,7 +734,7 @@ ImageLayer::createImageFromTileSource(const TileKey&    key,
             OE_DEBUG << LC << "createImageFromTileSource: blacklisted(" << key.str() << ")" << std::endl;
             return GeoImage::INVALID;
         }
-    
+
         if ( !source->hasData( key ) )
         {
             OE_DEBUG << LC << "createImageFromTileSource: hasData(" << key.str() << ") == false" << std::endl;
@@ -743,12 +743,12 @@ ImageLayer::createImageFromTileSource(const TileKey&    key,
         result = source->createImage( key, op.get(), progress );
     }
 
-    // Process images with full alpha to properly support MP blending.    
+    // Process images with full alpha to properly support MP blending.
     if ( result != 0L && *_runtimeOptions.featherPixels())
     {
         ImageUtils::featherAlphaRegions( result.get() );
-    }    
-    
+    }
+
     // If image creation failed (but was not intentionally canceled),
     // blacklist this tile for future requests.
     if ( result == 0L && (!progress || !progress->isCanceled()) )
@@ -854,13 +854,13 @@ ImageLayer::assembleImageFromTileSource(const TileKey&    key,
     if ( mosaicedImage.valid() )
     {
         // GeoImage::reproject() will automatically crop the image to the correct extents.
-        // so there is no need to crop after reprojection. Also note that if the SRS's are the 
+        // so there is no need to crop after reprojection. Also note that if the SRS's are the
         // same (even though extents are different), then this operation is technically not a
         // reprojection but merely a resampling.
 
-        result = mosaicedImage.reproject( 
+        result = mosaicedImage.reproject(
             key.getProfile()->getSRS(),
-            &key.getExtent(), 
+            &key.getExtent(),
             *_runtimeOptions.reprojectedTileSize(),
             *_runtimeOptions.reprojectedTileSize(),
             *_runtimeOptions.driver()->bilinearReprojection());
