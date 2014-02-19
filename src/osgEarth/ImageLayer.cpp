@@ -798,7 +798,7 @@ ImageLayer::assembleImageFromTileSource(const TileKey&    key,
             k->getExtent().getBounds(minX, minY, maxX, maxY);
 
             bool isFallback = false;
-            GeoImage image = createImageFromTileSource( *k, progress, true, isFallback );
+            GeoImage image = createImageFromTileSource( *k, progress, false, isFallback );
             if ( image.valid() )
             {
                 // make sure the image is RGBA.
