@@ -173,7 +173,7 @@ Profile::create(const SpatialReference* srs,
             numTilesWideAtLod0,
             numTilesHighAtLod0 );
     }
-    
+
     OE_WARN << LC << "Failed to create profile; null SRS" << std::endl;
     return 0L;
 }
@@ -320,7 +320,7 @@ osg::Referenced( true )
     _numTilesWideAtLod0 = numTilesWideAtLod0 != 0? numTilesWideAtLod0 : srs->isGeographic()? 2 : 1;
     _numTilesHighAtLod0 = numTilesHighAtLod0 != 0? numTilesHighAtLod0 : 1;
 
-    _latlong_extent = GeoExtent( 
+    _latlong_extent = GeoExtent(
         srs->getGeographicSRS(),
         geo_xmin, geo_ymin, geo_xmax, geo_ymax );
 
@@ -444,7 +444,7 @@ Profile::ProfileType
 Profile::getProfileTypeFromSRS(const std::string& srs_string)
 {
     osg::ref_ptr<SpatialReference> srs = SpatialReference::create( srs_string );
-    return 
+    return
         srs.valid() && srs->isGeographic()? Profile::TYPE_GEODETIC :
         srs.valid() && srs->isMercator()? Profile::TYPE_MERCATOR :
         srs.valid() && srs->isProjected()? Profile::TYPE_LOCAL :
@@ -496,7 +496,7 @@ Profile::getLevelOfDetailForHorizResolution( double resolution, int tileSize ) c
 
     double tileRes = (_extent.width() / (double)_numTilesWideAtLod0) / (double)tileSize;
     unsigned int level = 0;
-    while( tileRes > resolution ) 
+    while( tileRes > resolution )
     {
         level++;
         tileRes *= 0.5;
@@ -642,7 +642,7 @@ Profile::addIntersectingTiles(const GeoExtent& key_ext, std::vector<TileKey>& ou
             return;
 
         double keySpan = std::min( keyWidth, keyHeight );
-        double keyArea = keyWidth * keyHeight;
+//        double keyArea = keyWidth * keyHeight;
         double keyAvg  = 0.5*(keyWidth+keyHeight);
 
         destLOD = 1;
@@ -657,7 +657,7 @@ Profile::addIntersectingTiles(const GeoExtent& key_ext, std::vector<TileKey>& ou
             currLOD++;
             double w, h;
             getTileDimensions(currLOD, w, h);
-            
+
             if ( w < keyAvg || h < keyAvg ) break;
             destLOD = currLOD;
             destTileWidth = w;
@@ -671,8 +671,8 @@ Profile::addIntersectingTiles(const GeoExtent& key_ext, std::vector<TileKey>& ou
         tileMinX = (int)((key_ext.xMin() - _extent.xMin()) / destTileWidth);
         tileMaxX = (int)((key_ext.xMax() - _extent.xMin()) / destTileWidth);
 
-        tileMinY = (int)((_extent.yMax() - key_ext.yMax()) / destTileHeight); 
-        tileMaxY = (int)((_extent.yMax() - key_ext.yMin()) / destTileHeight); 
+        tileMinY = (int)((_extent.yMax() - key_ext.yMax()) / destTileHeight);
+        tileMaxY = (int)((_extent.yMax() - key_ext.yMin()) / destTileHeight);
     }
 
     unsigned int numWide, numHigh;
@@ -760,9 +760,9 @@ Profile::getIntersectingTiles(const GeoExtent& extent, std::vector<TileKey>& out
 
 unsigned int
 Profile::getEquivalentLOD( const Profile* profile, unsigned int lod ) const
-{    
+{
     //If the profiles are equivalent, just use the incoming lod
-    if (profile->isEquivalentTo( this ) ) 
+    if (profile->isEquivalentTo( this ) )
         return lod;
 
     double rhsWidth, rhsHeight;
@@ -782,7 +782,7 @@ Profile::getEquivalentLOD( const Profile* profile, unsigned int lod ) const
         targetWidth = profile->getSRS()->transformUnits( rhsWidth, getSRS() );
         targetHeight = profile->getSRS()->transformUnits( rhsHeight, getSRS() );
     }
-    
+
     int currLOD = 0;
     int destLOD = currLOD;
 

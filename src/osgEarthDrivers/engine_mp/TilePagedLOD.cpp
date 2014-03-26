@@ -117,7 +117,7 @@ TilePagedLOD::addChild(osg::Node* node)
             return true;
         }
 
-        // If it's a TileNode, this is the simple first addition of the 
+        // If it's a TileNode, this is the simple first addition of the
         // static TileNode child (not from the pager).
         TileNode* tilenode = dynamic_cast<TileNode*>( node );
         if ( tilenode && _live.get() )
@@ -135,8 +135,8 @@ TilePagedLOD::addChild(osg::Node* node)
 // The osgDB::DatabasePager will call this automatically to purge expired
 // tiles from the scene graph.
 bool
-TilePagedLOD::removeExpiredChildren(double         expiryTime, 
-                                    unsigned       expiryFrame, 
+TilePagedLOD::removeExpiredChildren(double         expiryTime,
+                                    unsigned       expiryFrame,
                                     osg::NodeList& removedChildren)
 {
     if (_children.size()>_numChildrenThatCannotBeExpired)

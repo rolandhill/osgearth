@@ -97,6 +97,11 @@ TileModel::ElevationData::getNormal(const osg::Vec3d&      ndc,
     south.z() = HeightFieldUtils::getHeightAtNormalizedLocation(_neighbors, south.x(), south.y(), interp);
     north.z() = HeightFieldUtils::getHeightAtNormalizedLocation(_neighbors, north.x(), north.y(), interp);
 
+    if(west.z() == -FLT_MAX) west.z() = east.z();
+    if(east.z() == -FLT_MAX) east.z() = west.z();
+    if(south.z() == -FLT_MAX) south.z() = north.z();
+    if(north.z() == -FLT_MAX) north.z() = south.z();
+
     osg::Vec3d westWorld, eastWorld, southWorld, northWorld;
     _locator->unitToModel(west,  westWorld);
     _locator->unitToModel(east,  eastWorld);
@@ -133,14 +138,14 @@ _fallbackData( fallbackData )
     _texture->setFilter( osg::Texture::MAG_FILTER, minFilter );
     _texture->setFilter( osg::Texture::MIN_FILTER, magFilter  );
     _texture->setWrap( osg::Texture::WRAP_S, osg::Texture::CLAMP_TO_EDGE );
-    _texture->setWrap( osg::Texture::WRAP_T, osg::Texture::CLAMP_TO_EDGE );    
+    _texture->setWrap( osg::Texture::WRAP_T, osg::Texture::CLAMP_TO_EDGE );
 
     // Disable mip mapping for npot tiles
     if (!ImageUtils::isPowerOfTwo( image ) || (!image->isMipmap() && ImageUtils::isCompressed(image)))
     {
         OE_DEBUG<<"Disabling mipmapping for non power of two tile size("<<image->s()<<", "<<image->t()<<")"<<std::endl;
         _texture->setFilter( osg::Texture::MIN_FILTER, osg::Texture::LINEAR );
-    }    
+    }
 
 
     _hasAlpha = image && ImageUtils::hasTransparency(image);

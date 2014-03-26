@@ -118,7 +118,7 @@ TileBlacklist::read(const std::string &filename)
 
 void
 TileBlacklist::write(const std::string &filename) const
-{ 
+{
     std::string path = osgDB::getFilePath(filename);
     if (!path.empty() && !osgDB::fileExists(path) && !osgDB::makeDirectory(path))
     {
@@ -151,12 +151,12 @@ _minValidValue        ( -32000.0f ),
 _maxValidValue        (  32000.0f ),
 _L2CacheSize          ( 16 ),
 _bilinearReprojection ( true )
-{ 
+{
     fromConfig( _conf );
 }
 
 
-Config 
+Config
 TileSourceOptions::getConfig() const
 {
     Config conf = DriverConfigOptions::getConfig();
@@ -237,7 +237,7 @@ _status ( Status::Error("Not initialized") )
         _blacklistFilename = _options.blacklistFilename().value();
     }
 
-    
+
     if (!_blacklistFilename.empty() && osgDB::fileExists(_blacklistFilename))
     {
         _blacklist = TileBlacklist::read(_blacklistFilename);
@@ -285,7 +285,7 @@ TileSource::startup(const osgDB::Options* options)
         {
             _status = status;
         }
-        else 
+        else
         {
             _status = Status::Error("No profile available");
         }
@@ -309,7 +309,7 @@ TileSource::getPixelsPerTile() const
 
 osg::Image*
 TileSource::createImage(const TileKey&        key,
-                        ImageOperation*       prepOp, 
+                        ImageOperation*       prepOp,
                         ProgressCallback*     progress )
 {
     if ( _status != STATUS_OK )
@@ -339,7 +339,7 @@ TileSource::createImage(const TileKey&        key,
 
 osg::HeightField*
 TileSource::createHeightField(const TileKey&        key,
-                              HeightFieldOperation* prepOp, 
+                              HeightFieldOperation* prepOp,
                               ProgressCallback*     progress )
 {
     if ( _status != STATUS_OK )
@@ -380,12 +380,12 @@ TileSource::createHeightField(const TileKey&        key,
     {
         ImageToHeightFieldConverter conv;
         hf = conv.convert( image.get() );
-    }      
+    }
     return hf;
 }
 
 bool
-TileSource::isOK() const 
+TileSource::isOK() const
 {
     return _status == STATUS_OK;
 }
@@ -455,7 +455,7 @@ TileSource::hasData(const osgEarth::TileKey& key) const
     //sematics: might have data.
 
     //If no data extents are provided, just return true
-    if (_dataExtents.size() == 0) 
+    if (_dataExtents.size() == 0)
         return true;
 
     const osgEarth::GeoExtent& keyExtent = key.getExtent();
@@ -463,7 +463,7 @@ TileSource::hasData(const osgEarth::TileKey& key) const
 
     for (DataExtentList::const_iterator itr = _dataExtents.begin(); itr != _dataExtents.end(); ++itr)
     {
-        if ((keyExtent.intersects( *itr )) && 
+        if ((keyExtent.intersects( *itr )) &&
             (!itr->minLevel().isSet() || itr->minLevel() <= key.getLOD()) &&
             (!itr->maxLevel().isSet() || itr->maxLevel() >= key.getLOD()))
         {
@@ -481,7 +481,7 @@ TileSource::hasDataForFallback(const osgEarth::TileKey& key) const
     //sematics: might have data.
 
     //If no data extents are provided, just return true
-    if (_dataExtents.size() == 0) 
+    if (_dataExtents.size() == 0)
         return true;
 
     const osgEarth::GeoExtent& keyExtent = key.getExtent();
@@ -489,7 +489,7 @@ TileSource::hasDataForFallback(const osgEarth::TileKey& key) const
 
     for (DataExtentList::const_iterator itr = _dataExtents.begin(); itr != _dataExtents.end(); ++itr)
     {
-        if ((keyExtent.intersects( *itr )) && 
+        if ((keyExtent.intersects( *itr )) &&
             (!itr->minLevel().isSet() || itr->minLevel() <= key.getLOD()))
         {
             intersectsData = true;

@@ -35,11 +35,11 @@ namespace
 {
     struct BuildColorData
     {
-        void init( const TileKey&                      key, 
-                   ImageLayer*                         layer, 
+        void init( const TileKey&                      key,
+                   ImageLayer*                         layer,
                    unsigned                            order,
                    const MapInfo&                      mapInfo,
-                   const MPTerrainEngineOptions&       opt, 
+                   const MPTerrainEngineOptions&       opt,
                    TileModel*                          model )
         {
             _key      = key;
@@ -81,7 +81,7 @@ namespace
                 }
                 hasDataInExtent = tileSource->hasDataInExtent( ext );
             }
-            
+
             if (hasDataInExtent)
             {
                 while( !geoImage.valid() && imageKey.valid() && _layer->isKeyValid(imageKey) )
@@ -111,7 +111,7 @@ namespace
             if ( geoImage.valid() )
             {
                 GeoLocator* locator = 0L;
-                
+
                 if ( useMercatorFastPath )
                     locator = new MercatorLocator(geoImage.getExtent());
                 else
@@ -168,7 +168,7 @@ namespace
         }
 
         void execute()
-        {            
+        {
             const MapInfo& mapInfo = _mapf->getMapInfo();
 
             // Request a heightfield from the map, falling back on lower resolution tiles
@@ -239,7 +239,7 @@ namespace
 
 //------------------------------------------------------------------------
 
-TileModelFactory::TileModelFactory(//const Map*                          map, 
+TileModelFactory::TileModelFactory(//const Map*                          map,
                                    TileNodeRegistry*                   liveTiles,
                                    const MPTerrainEngineOptions& terrainOptions ) :
 //_map           ( map ),
@@ -257,17 +257,16 @@ TileModelFactory::getHeightFieldCache() const
 
 
 void
-TileModelFactory::createTileModel(const TileKey&           key, 
+TileModelFactory::createTileModel(const TileKey&           key,
                                   const MapFrame&          frame,
                                   osg::ref_ptr<TileModel>& out_model,
                                   //bool&                    out_hasRealData)
                                   float                    default_height )
 {
-
     osg::ref_ptr<TileModel> model = new TileModel( frame.getRevision(), frame.getMapInfo() );
     model->_tileKey = key;
     model->_tileLocator = GeoLocator::createForKey(key, frame.getMapInfo());
-    
+
     // Fetch the image data and make color layers.
     unsigned order = 0;
     for( ImageLayerVector::const_iterator i = frame.imageLayers().begin(); i != frame.imageLayers().end(); ++i )
@@ -278,7 +277,7 @@ TileModelFactory::createTileModel(const TileKey&           key,
         {
             BuildColorData build;
             build.init( key, layer, order, frame.getMapInfo(), _terrainOptions, model.get() );
-            
+
             bool addedToModel = build.execute();
             if ( addedToModel )
             {
