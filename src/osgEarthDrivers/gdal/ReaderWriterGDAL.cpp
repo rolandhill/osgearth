@@ -1257,7 +1257,7 @@ public:
             return NULL;
         }
 
-        GDAL_SCOPED_LOCK;
+        GDAL_DS_SCOPED_LOCK;
 
         int tileSize = _options.tileSize().value();
 
