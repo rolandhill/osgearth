@@ -231,8 +231,8 @@ HeightFieldUtils::getHeightAtPixel(const osg::HeightField* hf, double c, double 
 }
 
 bool
-HeightFieldUtils::getInterpolatedHeight(const osg::HeightField* hf, 
-                                        unsigned c, unsigned r, 
+HeightFieldUtils::getInterpolatedHeight(const osg::HeightField* hf,
+                                        unsigned c, unsigned r,
                                         float& out_height,
                                         ElevationInterpolation interpolation)
 {
@@ -288,6 +288,7 @@ HeightFieldUtils::getHeightAtNormalizedLocation(const HeightFieldNeighborhood& h
                                                 double& output,
                                                 ElevationInterpolation interp)
 {
+    float height = -FLT_MAX;
     osg::ref_ptr<osg::HeightField> hf;
     double nx2, ny2;
     if ( hood.getNeighborForNormalizedLocation(nx, ny, hf, nx2, ny2) )
@@ -352,7 +353,7 @@ HeightFieldUtils::scaleHeightFieldToDegrees( osg::HeightField* hf )
 
 
 osg::HeightField*
-HeightFieldUtils::createSubSample(osg::HeightField* input, const GeoExtent& inputEx, 
+HeightFieldUtils::createSubSample(osg::HeightField* input, const GeoExtent& inputEx,
                                   const GeoExtent& outputEx, osgEarth::ElevationInterpolation interpolation)
 {
     double div = outputEx.width()/inputEx.width();
@@ -401,7 +402,7 @@ HeightFieldUtils::createSubSample(osg::HeightField* input, const GeoExtent& inpu
 osg::HeightField*
 HeightFieldUtils::resampleHeightField(osg::HeightField*      input,
                                       const GeoExtent&       extent,
-                                      int                    newColumns, 
+                                      int                    newColumns,
                                       int                    newRows,
                                       ElevationInterpolation interp)
 {
@@ -424,7 +425,7 @@ HeightFieldUtils::resampleHeightField(osg::HeightField*      input,
     output->setXInterval( stepX );
     output->setYInterval( stepY );
     output->setOrigin( origin );
-    
+
     for( int y = 0; y < newRows; ++y )
     {
         for( int x = 0; x < newColumns; ++x )
@@ -465,7 +466,7 @@ HeightFieldUtils::createReferenceHeightField(const GeoExtent& ex,
         double latInterval = geodeticExtent.height() / (double)(numRows-1);
 
         for( unsigned r=0; r<numRows; ++r )
-        {            
+        {
             double lat = latMin + latInterval*(double)r;
             for( unsigned c=0; c<numCols; ++c )
             {
@@ -484,7 +485,7 @@ HeightFieldUtils::createReferenceHeightField(const GeoExtent& ex,
     }
 
     hf->setBorderWidth( 0 );
-    return hf;    
+    return hf;
 }
 
 void
@@ -531,8 +532,8 @@ HeightFieldUtils::resolveInvalidHeights(osg::HeightField* grid,
 }
 
 osg::NodeCallback*
-HeightFieldUtils::createClusterCullingCallback(osg::HeightField*          grid, 
-                                               const osg::EllipsoidModel* et, 
+HeightFieldUtils::createClusterCullingCallback(osg::HeightField*          grid,
+                                               const osg::EllipsoidModel* et,
                                                float                      verticalScale )
 {
     //This code is a very slightly modified version of the DestinationTile::createClusterCullingCallback in VirtualPlanetBuilder.
@@ -598,7 +599,7 @@ HeightFieldUtils::createClusterCullingCallback(osg::HeightField*          grid,
                 float local_m = globe_radius*( 1.0/ cos(theta+phi) - 1.0);
                 float local_radius = static_cast<float>(globe_radius * tan(beta)); // beta*globe_radius;
                 min_dot_product = osg::minimum(min_dot_product, local_dot_product);
-                max_cluster_culling_height = osg::maximum(max_cluster_culling_height,local_m);      
+                max_cluster_culling_height = osg::maximum(max_cluster_culling_height,local_m);
                 max_cluster_culling_radius = osg::maximum(max_cluster_culling_radius,local_radius);
             }
             else
@@ -607,11 +608,11 @@ HeightFieldUtils::createClusterCullingCallback(osg::HeightField*          grid,
                 return 0;
             }
         }
-    }    
+    }
 
     osg::NodeCallback* ccc = ClusterCullingFactory::create(
         center_position + transformed_center_normal*max_cluster_culling_height ,
-        transformed_center_normal, 
+        transformed_center_normal,
         min_dot_product,
         max_cluster_culling_radius);
 

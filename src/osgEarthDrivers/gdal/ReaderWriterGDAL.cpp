@@ -41,8 +41,6 @@
 
 #include "GDALOptions"
 
-OpenThreads::ReentrantMutex gdal_ds_mutex;
-
 #define GDAL_DS_SCOPED_LOCK \
     OpenThreads::ScopedLock<OpenThreads::ReentrantMutex> _slock( gdal_ds_mutex )\
 
@@ -202,7 +200,7 @@ getFiles(const std::string &file, const std::vector<std::string> &exts, const st
 static GDALDatasetH
 build_vrt(std::vector<std::string> &files, ResolutionStrategy resolutionStrategy)
 {
-    GDAL_SCOPED_LOCK;
+//    GDAL_SCOPED_LOCK;
 
     char* projectionRef = NULL;
     int nBands = 0;
@@ -678,7 +676,7 @@ public:
 
     Status initialize( const osgDB::Options* dbOptions )
     {
-        GDAL_SCOPED_LOCK;
+//        GDAL_SCOPED_LOCK;
 
         Cache* cache = 0;
 
@@ -1131,7 +1129,7 @@ public:
     */
     static GDALRasterBand* findBandByColorInterp(GDALDataset *ds, GDALColorInterp colorInterp)
     {
-        GDAL_DS_SCOPED_LOCK;
+//        GDAL_DS_SCOPED_LOCK;
 
         for (int i = 1; i <= ds->GetRasterCount(); ++i)
         {
@@ -1142,7 +1140,7 @@ public:
 
     static GDALRasterBand* findBandByDataType(GDALDataset *ds, GDALDataType dataType)
     {
-        GDAL_DS_SCOPED_LOCK;
+//        GDAL_DS_SCOPED_LOCK;
 
         for (int i = 1; i <= ds->GetRasterCount(); ++i)
         {
@@ -1592,7 +1590,7 @@ public:
 
     bool isValidValue(float v, GDALRasterBand* band)
     {
-        GDAL_DS_SCOPED_LOCK;
+//        GDAL_DS_SCOPED_LOCK;
 
         float bandNoData = -32767.0f;
         int success;
@@ -1998,6 +1996,9 @@ private:
     osg::ref_ptr< osgDB::Options > _dbOptions;
 
     unsigned int _maxDataLevel;
+
+    OpenThreads::ReentrantMutex gdal_ds_mutex;
+
 };
 
 
