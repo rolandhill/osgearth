@@ -194,7 +194,8 @@ namespace osgEarth { namespace Drivers { namespace MPTerrainEngine
             const TileKey&           key,
             const MapFrame&          frame,
             osg::ref_ptr<TileModel>& out_model,
-            ProgressCallback*        progress);
+            ProgressCallback*        progress,
+            float                    default_height );
 
     private:        
 

@@ -1469,7 +1469,7 @@ namespace
                    const std::string destWKT, double destMinX, double destMinY, double destMaxX, double destMaxY,
                    int width = 0, int height = 0, bool useBilinearInterpolation = true)
     {
-        GDAL_SCOPED_LOCK;
+//        GDAL_SCOPED_LOCK;
         osg::Timer_t start = osg::Timer::instance()->tick();
 
         //Create a dataset from the source image

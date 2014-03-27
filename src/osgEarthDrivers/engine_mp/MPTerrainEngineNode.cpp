@@ -16,12 +16,16 @@
 * You should have received a copy of the GNU Lesser General Public License
 * along with this program.  If not, see <http://www.gnu.org/licenses/>
 */
+
+#include <bitset>
+
 #include "MPTerrainEngineNode"
 #include "SingleKeyNodeFactory"
 #include "TerrainNode"
 #include "TileModelFactory"
 #include "TileModelCompiler"
 #include "TilePagedLOD"
+#include "TileGroup"
 
 #include <osgEarth/HeightFieldUtils>
 #include <osgEarth/ImageUtils>
@@ -40,10 +44,35 @@
 #include <osg/BlendFunc>
 #include <osgDB/DatabasePager>
 
+#include <osg/NodeVisitor>
+
 #define LC "[MPTerrainEngineNode] "
 
 using namespace osgEarth::Drivers::MPTerrainEngine;
 using namespace osgEarth;
+
+//---------------------------------------------------------------------------
+class CheckOrphanedBoundariesVisitor: public osg::NodeVisitor
+{
+    public:
+        CheckOrphanedBoundariesVisitor() : osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ALL_CHILDREN) {};
+        virtual ~CheckOrphanedBoundariesVisitor() {};
+
+        virtual void apply( osg::MatrixTransform& mt )
+        {
+            TileNode* tn = dynamic_cast<TileNode*>(&mt);
+            if(tn)
+            {
+                tn->CheckOrphanedBoundaries();
+            }
+
+            // Keep traversing the rest of the scene graph.
+            traverse(mt);
+        }
+
+    protected:
+    private:
+};
 
 //------------------------------------------------------------------------
 
@@ -397,6 +426,8 @@ namespace
     };
 }
 
+static Threading::ReadWriteMutex s_changedTileMutex;
+static Threading::ReadWriteMutex s_tileUpdateMutex;
 
 void
 MPTerrainEngineNode::traverse(osg::NodeVisitor& nv)
@@ -438,7 +469,34 @@ MPTerrainEngineNode::traverse(osg::NodeVisitor& nv)
     }
 #endif
 
+    // Clear the list of tiles that have changed prior to traversing the scene graph
+    _changedTiles.clear();
+
     TerrainEngineNode::traverse( nv );
+
+    if ( nv.getVisitorType() == nv.CULL_VISITOR )
+    {
+        // Clear the list of tiles that need to be modified to stitch to their neighbours
+        _tilesToUpdate.clear();
+
+        BuildTileUpdateVec();
+
+        std::vector< osg::ref_ptr<TileNode> >::iterator it;
+
+        Threading::ScopedWriteLock exclusiveLock( s_tileUpdateMutex );
+
+        for(it = _tilesToUpdate.begin(); it != _tilesToUpdate.end(); it++)
+        {
+            (*it)->AdjustEdges(true);
+        }
+
+        for(it = _tilesToUpdate.begin(); it != _tilesToUpdate.end(); it++)
+        {
+            (*it)->AdjustEdges(false);
+        }
+
+        _tilesToUpdate.clear();
+    }
 }
 
 
@@ -460,7 +518,7 @@ MPTerrainEngineNode::getKeyNodeFactory()
             _terrainOptions );
 
         // initialize a key node factory.
-        knf = new SingleKeyNodeFactory(
+        SingleKeyNodeFactory* sknf = new SingleKeyNodeFactory(
             getMap(),
             _tileModelFactory.get(),
             compiler,
@@ -469,6 +527,9 @@ MPTerrainEngineNode::getKeyNodeFactory()
             _terrainOptions,
             _terrain, 
             _uid );
+
+            sknf->setTerrainEngineNode(this);
+            knf = sknf;
     }
 
     return knf.get();
@@ -660,7 +721,6 @@ MPTerrainEngineNode::toggleElevationLayer( ElevationLayer* layer )
     refresh();
 }
 
-
 // Generates the main shader code for rendering the terrain.
 void
 MPTerrainEngineNode::updateState()
@@ -844,5 +904,144 @@ MPTerrainEngineNode::updateState()
         }
 
         _stateUpdateRequired = false;
+    }
+}
+
+void
+MPTerrainEngineNode::RegisterChangedTileNode(TileNode* tilenode, Side side)
+{
+    Threading::ScopedWriteLock exclusiveLock( s_changedTileMutex );
+    ChangedTile ct(tilenode, side);
+    _changedTiles.push_back(ct);
+}
+
+void
+MPTerrainEngineNode::BuildTileUpdateVec()
+{
+    // Avoid calculating these parameters every call
+    unsigned int numTilesX0;
+    unsigned int numTilesY0;
+    _update_mapf->getProfile()->getNumTiles(0, numTilesX0, numTilesY0);
+
+    // Iterate through changed tiles
+    std::vector< ChangedTile >::iterator it;
+
+    Threading::ScopedWriteLock exclusiveLock( s_changedTileMutex );
+    for(it = _changedTiles.begin(); it != _changedTiles.end(); it++)
+    {
+        // Get location information for the changed tile
+        const TileKey& key = (*it)._tilenode->getKey();
+        unsigned int lod = key.getLOD();
+        unsigned int x = key.getTileX();
+        unsigned int y = key.getTileY();
+
+        unsigned int numTilesX;
+        unsigned int numTilesY;
+
+        // Get the total number of tiles at the changed tile's LOD
+        _update_mapf->getProfile()->getNumTiles(lod, numTilesX, numTilesY);
+
+        // Remove the appropriate NESW sides from the list if the tile is on one of the boundaries
+        if(x == 0) (*it)._side = (*it)._side & (~Side_W);
+        if(y == 0) (*it)._side = (*it)._side & (~Side_N);
+        if(x == numTilesX - 1) (*it)._side = (*it)._side & (~Side_E);
+        if(y == numTilesY - 1) (*it)._side = (*it)._side & (~Side_S);
+
+        // Calculate how many tiles at the changed tile's LOD there are in a single root tile.
+        // We need this to drill down the groups of 4 children.
+        unsigned int tilesPerLod0Tile = numTilesX / numTilesX0;
+
+        // Find the TileNode(s) bounding this node on each side and set bounding TileNode* on tile of higher LOD.
+        // We only search for one side at a time.
+        // Each call can result in 0, 1 or more tile boundaries being marked depending on which tiles have smaller, equal or larger LOD.
+        if((*it)._side & Side_W) MarkBoundingTiles((*it)._tilenode, Side_W, tilesPerLod0Tile, numTilesX0, numTilesY0);
+        if((*it)._side & Side_N) MarkBoundingTiles((*it)._tilenode, Side_N, tilesPerLod0Tile, numTilesX0, numTilesY0);
+        if((*it)._side & Side_E) MarkBoundingTiles((*it)._tilenode, Side_E, tilesPerLod0Tile, numTilesX0, numTilesY0);
+        if((*it)._side & Side_S) MarkBoundingTiles((*it)._tilenode, Side_S, tilesPerLod0Tile, numTilesX0, numTilesY0);
+    }
+}
+
+void
+MPTerrainEngineNode::MarkBoundingTiles(TileNode* tilenode, Side side, unsigned int tilesPerLod0Tile, unsigned int numTilesX0, unsigned int numTilesY0)
+{
+    // Get location information
+    const TileKey& key = tilenode->getTileModel()->_tileKey;
+    unsigned int lod = key.getLOD();
+    unsigned int x = key.getTileX();
+    unsigned int y = key.getTileY();
+
+    // Calcualte target neighbour at the same LOD
+    // We don't need to worry about going outside the tile limits as this was handled in BuildTileUpdateVec
+    unsigned int tx = x;
+    unsigned int ty = y;
+    if(side == Side_W) tx -= 1;
+    else if(side == Side_N) ty -= 1;
+    else if(side == Side_E) tx += 1;
+    else if(side == Side_S) ty += 1;
+
+    // Figure out which of the LOD0 tiles contains the target
+    unsigned int lod0TileX = tx / tilesPerLod0Tile;
+    unsigned int lod0TileY = ty / tilesPerLod0Tile;
+
+    // Calculate the offset relative to the LOD0 tile
+    tx = tx - (lod0TileX * tilesPerLod0Tile);
+    ty = ty - (lod0TileY * tilesPerLod0Tile);
+
+    // If referring to the boundary wrt a neighbour, we will need to use the opposite side
+    Side OtherSide;
+    if(side == Side_W) OtherSide = Side_E;
+    else if(side == Side_N) OtherSide = Side_S;
+    else if(side == Side_E)  OtherSide = Side_W;
+    else if(side == Side_S)  OtherSide = Side_N;
+
+    //Set up a vector to hold bounding tilenodes
+    std::vector< TileNode* > tnv;
+
+    // Find target LOD0 node
+    unsigned int index = numTilesY0 * lod0TileX + lod0TileY;
+    TilePagedLOD* root = static_cast<TilePagedLOD*>( _terrain->getChild(0) ); // Root TilePagedLOD
+    osg::Group* group = static_cast<osg::Group*>( root->getChild(index) ); // LOD0 TileGroup or Group
+
+    TileGroup* tg = dynamic_cast<TileGroup*>(group);
+    if(tg)
+    {
+        tg->GetDisplayedTilesForTarget(tx, ty, lod, OtherSide, tnv);
+    }
+
+    std::vector< TileNode* >::iterator it;
+    for( it = tnv.begin(); it != tnv.end(); it++)
+    {
+        const TileKey& otherkey = (*it)->getTileModel()->_tileKey;
+        unsigned int otherlod = otherkey.getLOD();
+
+        if(lod >= otherlod)
+        {
+            QueueTileForUpdate(tilenode, side, *it);
+        }
+        else
+        {
+            QueueTileForUpdate(*it, OtherSide, tilenode);
+        }
+    }
+}
+
+void
+MPTerrainEngineNode::QueueTileForUpdate(TileNode* tilenode, Side side, TileNode* target)
+{
+    if(side == Side_W) tilenode->setBoundTileW(target);
+    else if(side == Side_N) tilenode->setBoundTileN(target);
+    else if(side == Side_E) tilenode->setBoundTileE(target);
+    else if(side == Side_S) tilenode->setBoundTileS(target);
+
+    //Search vector to see if TileNode is already there
+    std::vector< osg::ref_ptr<TileNode> >::iterator it;
+
+    Threading::ScopedWriteLock exclusiveLock( s_tileUpdateMutex );
+
+    it = std::find(_tilesToUpdate.begin(), _tilesToUpdate.end(), tilenode);
+
+    if(it == _tilesToUpdate.end())
+    {
+        _tilesToUpdate.push_back(tilenode);
     }
 }

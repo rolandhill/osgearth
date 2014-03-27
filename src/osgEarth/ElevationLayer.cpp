@@ -500,7 +500,9 @@ ElevationLayerVector::populateHeightField(osg::HeightField*      hf,
                                           const TileKey&         key,
                                           const Profile*         haeProfile,
                                           ElevationInterpolation interpolation,
-                                          ProgressCallback*      progress ) const
+                                          ProgressCallback*      progress,
+                                          bool                   rejectNoData,
+                                          float                  noDataHeight) const
 {
     // heightfield must already exist.
     if ( !hf )
@@ -604,6 +606,11 @@ ElevationLayerVector::populateHeightField(osg::HeightField*      hf,
                     realData = true;
                     hf->setHeight(c, r, elevation);
                 }
+            }
+
+            if(!resolved)
+            {
+                hf->setHeight(c, r, NO_DATA_VALUE);
             }
 
             for(int i=offsets.size()-1; i>=0; --i)

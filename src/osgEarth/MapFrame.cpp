@@ -102,7 +102,9 @@ MapFrame::populateHeightField(osg::ref_ptr<osg::HeightField>& hf,
         key,
         convertToHAE ? _map->getProfileNoVDatum() : 0L,
         interp,
-        progress );
+        progress,
+        _map->getRejectNoData(),
+        _map->getNoDataHeight() );
 }
 
 

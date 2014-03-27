@@ -47,7 +47,7 @@ namespace
 {
     struct ComputeVisibleBounds : public osg::NodeVisitor
     {
-        ComputeVisibleBounds(osg::Polytope& tope, osg::Matrix& local2world) 
+        ComputeVisibleBounds(osg::Polytope& tope, osg::Matrix& local2world)
             : osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ACTIVE_CHILDREN)
         {
             _matrixStack.push(local2world);
@@ -127,14 +127,14 @@ namespace
     /**
      * Interects a finite ray with a sphere of radius R. The ray is defined
      * by the X and Y components (in projection aka "clip" space). The function
-     * uses this information to build a ray from Z=-1 to Z=1. 
+     * uses this information to build a ray from Z=-1 to Z=1.
      *
      * Places the intersection point(s) in the output vector.
      */
     bool
-    intersectClipRayWithSphere(double                   clipx, 
-                               double                   clipy, 
-                               const osg::Matrix&       clipToWorld, 
+    intersectClipRayWithSphere(double                   clipx,
+                               double                   clipy,
+                               const osg::Matrix&       clipToWorld,
                                double                   R,
                                double&                  inout_maxDist2)
     {
@@ -208,16 +208,17 @@ namespace
      * (for use in projected map mode)
      */
     void
-    intersectClipRayWithPlane(double                   clipx, 
-                              double                   clipy, 
+    intersectClipRayWithPlane(double                   clipx,
+                              double                   clipy,
                               const osg::Matrix&       clipToWorld,
+                              double                   R,
                               double&                  inout_maxDist2)
     {
         osg::Vec3d p0 = osg::Vec3d(clipx, clipy, -1.0) * clipToWorld; // near plane
         osg::Vec3d p1 = osg::Vec3d(clipx, clipy,  1.0) * clipToWorld; // far plane
 
         // zero-level plane is hard-coded here
-        osg::Vec3d planePoint(0,0,0);
+        osg::Vec3d planePoint(0,0,R);
         osg::Vec3d planeNormal(0,0,1);
 
         osg::Vec3d L = p1-p0;
@@ -234,7 +235,7 @@ namespace
 
 
     /**
-     * Takes a set of world verts and finds their X-Y bounding box in the 
+     * Takes a set of world verts and finds their X-Y bounding box in the
      * plane of the camera represented by the specified view matrix. Also
      * calculates the maximum distance from the eyepoint to a vertex (3D).
      */
@@ -256,7 +257,7 @@ namespace
             if ( d.x() > xmax ) xmax = d.x();
             if ( d.y() < ymin ) ymin = d.y();
             if ( d.y() > ymax ) ymax = d.y();
-            
+
             double dist2 = ((*i)-eye).length2();
             if ( dist2 > maxDist2 )
                 maxDist2 = dist2;
@@ -267,7 +268,7 @@ namespace
 
 
     /**
-     * 
+     *
      */
     void
     getNearFar(const osg::Matrix&      viewMatrix,
@@ -331,7 +332,7 @@ void
 OverlayDecorator::onGroupChanged(osg::Group* group)
 {
     // the group changed so we need to give the corresponding
-    // technique a chance to re-establish itself based on the 
+    // technique a chance to re-establish itself based on the
     // contents of that group.
 
     // update the total child count
@@ -418,14 +419,11 @@ OverlayDecorator::cullTerrainAndCalculateRTTParams(osgUtil::CullVisitor* cv,
     double eyeLen;
     osg::Vec3d worldUp;
 
-    // Radius at eyepoint (geocentric)
-    double R;
+    // Radius at eyepoint (geocentric), or height of plane (projected)
+    double R = 0.0;
 
     // height above sea level
     double hasl;
-
-    // weight of the HASL value when calculating extent compensation
-    double haslWeight;
 
     // approximate distance to the visible horizon
     double horizonDistance;
@@ -442,41 +440,65 @@ OverlayDecorator::cullTerrainAndCalculateRTTParams(osgUtil::CullVisitor* cv,
 
         hasl = geodetic.z();
         R = eyeLen - hasl;
-        
+
         //Actually sample the terrain to get the height and adjust the eye position so it's a tighter fit to the real data.
+        // Note: We don't adjust hasl. If we do, it makes the draped image flick off as the camera approaches the surface - R Hill.
         double height;
         if (_engine->getTerrain()->getHeight(geoSRS, geodetic.x(), geodetic.y(), &height)) // SpatialReference::create("epsg:4326"), osg::RadiansToDegrees( lon ), osg::RadiansToDegrees( lat ), &height))
         {
             geodetic.z() -= height;
+            R = eyeLen - geodetic.z();
+         }
+
+        // Set a minimum distance from the ground.
+        if( hasl > 0 )
+        {
+              hasl = osg::maximum( hasl, 100.0 );
         }
-        hasl = osg::maximum( hasl, 100.0 );
+        else
+        {
+            hasl = osg::minimum( hasl, -100.0 );
+        }
 
         // up vector tangent to the ellipsoid under the eye.
         worldUp = _ellipsoid->computeLocalUpVector(eye.x(), eye.y(), eye.z());
 
-        // radius of the earth under the eyepoint
-        // gw: wrong. use R instead.
-        double radius = eyeLen - hasl; 
-        horizonDistance = sqrt( 2.0*radius*hasl + hasl*hasl );
+        horizonDistance = sqrt( 2.0*R*fabs(hasl) + hasl*hasl );
     }
     else // projected map
     {
         hasl = eye.z();
-        hasl = osg::maximum( hasl, 100.0 );
+
+        // Set a minimum distance from the ground.
+        if( hasl > 0 )
+        {
+              hasl = osg::maximum( hasl, 100.0 );
+        }
+        else
+        {
+            hasl = osg::minimum( hasl, -100.0 );
+        }
+
+        // eyeLen should be positive
+        eyeLen = fabs(hasl) * 2.0;
+
+        //Actually sample the terrain to get the height of the plane for projection volume intersection later.
+        const SpatialReference* geoSRS = _engine->getTerrain()->getSRS();
+        double height;
+        if (_engine->getTerrain()->getHeight(geoSRS, eye.x(), eye.y(), &height)) // SpatialReference::create("epsg:4326"), osg::RadiansToDegrees( lon ), osg::RadiansToDegrees( lat ), &height))
+        {
+            R = height;
+        }
+
         worldUp.set( 0.0, 0.0, 1.0 );
-        eyeLen = hasl * 2.0;
 
         // there "horizon distance" in a projected map is infinity,
         // so just simulate one.
-        horizonDistance = sqrt(2.0*6356752.3142*hasl + hasl*hasl);
+        horizonDistance = sqrt(2.0*6356752.3142*fabs(hasl) + hasl*hasl);
     }
-    
+
     // update the shared horizon distance.
     pvd._sharedHorizonDistance = horizonDistance;
-
-    // create a "weighting" that weights HASL against the camera's pitch.
-    osg::Vec3d lookVector = cv->getLookVectorLocal();
-    haslWeight = osg::absolute(worldUp * lookVector);
 
     // unit look-vector of the eye:
     osg::Vec3d camEye, camTo, camUp;
@@ -494,7 +516,7 @@ OverlayDecorator::cullTerrainAndCalculateRTTParams(osgUtil::CullVisitor* cv,
     cv->setCalculatedNearPlane( FLT_MAX );
     cv->setCalculatedFarPlane( -FLT_MAX );
 
-    // cull the subgraph (i.e. the terrain) here. This doubles as the subgraph's official 
+    // cull the subgraph (i.e. the terrain) here. This doubles as the subgraph's official
     // cull traversal and a gathering of its clip planes.
     cv->pushStateSet( pvd._sharedTerrainStateSet.get() );
     osg::Group::traverse( *cv );
@@ -529,23 +551,80 @@ OverlayDecorator::cullTerrainAndCalculateRTTParams(osgUtil::CullVisitor* cv,
     double maxDist2 = 0.0;
 
     // constrain the far plane.
-    // intersect the top corners of the projection volume since those are the farthest.
+    // We need to intersect all corners of the projection volume with the sphere / plane when allowing the camera to rotate through all it's axes - R Hill.
+    // We also keep count of the number of successful interscetions as we can only constrain the far plane if none of the corners look tothe horizon.
+    int validint = 0;
     if ( _isGeocentric )
     {
-        intersectClipRayWithSphere( -1.0, 1.0, inverseMVP, R, maxDist2 );
-        intersectClipRayWithSphere(  1.0, 1.0, inverseMVP, R, maxDist2 );
+        double dist2;
+        dist2 = 0.0;
+        if( intersectClipRayWithSphere( -1.0, 1.0, inverseMVP, R, dist2 ) )
+        {
+            validint++;
+            if(dist2 > maxDist2) maxDist2 = dist2;
+        }
+
+        dist2 = 0.0;
+        if( intersectClipRayWithSphere( 1.0, 1.0, inverseMVP, R, dist2 ) )
+        {
+            validint++;
+            if(dist2 > maxDist2) maxDist2 = dist2;
+        }
+
+        dist2 = 0.0;
+        if( intersectClipRayWithSphere( -1.0, -1.0, inverseMVP, R, dist2 ) )
+        {
+            validint++;
+            if(dist2 > maxDist2) maxDist2 = dist2;
+        }
+
+        dist2 = 0.0;
+        if( intersectClipRayWithSphere( 1.0, -1.0, inverseMVP, R, dist2 ) )
+        {
+            validint++;
+            if(dist2 > maxDist2) maxDist2 = dist2;
+        }
     }
     else // projected
     {
-        intersectClipRayWithPlane( -1.0, 1.0, inverseMVP, maxDist2 );
-        if ( maxDist2 == 0.0 )
-            intersectClipRayWithPlane( 1.0, 1.0, inverseMVP, maxDist2 );
-        if ( maxDist2 == 0.0 )
-            intersectClipRayWithPlane( 0.0, 1.0, inverseMVP, maxDist2 );
+        double dist2;
+
+        dist2 = 0.0;
+        intersectClipRayWithPlane( -1.0, 1.0, inverseMVP, R, dist2 );
+        if( dist2 > 0 )
+        {
+            validint++;
+            if(dist2 > maxDist2) maxDist2 = dist2;
+        }
+
+        dist2 = 0.0;
+        intersectClipRayWithPlane( 1.0, 1.0, inverseMVP, R, dist2 );
+        if( dist2 > 0 )
+        {
+            validint++;
+            if(dist2 > maxDist2) maxDist2 = dist2;
+        }
+
+        dist2 = 0.0;
+        intersectClipRayWithPlane( -1.0, -1.0, inverseMVP, R, dist2 );
+        if( dist2 > 0 )
+        {
+            validint++;
+            if(dist2 > maxDist2) maxDist2 = dist2;
+        }
+
+        dist2 = 0.0;
+        intersectClipRayWithPlane( 1.0, -1.0, inverseMVP, R, dist2 );
+        if( dist2 > 0 )
+        {
+            validint++;
+            if(dist2 > maxDist2) maxDist2 = dist2;
+        }
     }
 
     // clamp down the far plane:
-    if ( maxDist2 != 0.0 )
+    // only if the entire projection volume intersects the map - R Hill
+    if ( validint == 4 && maxDist2 != 0.0)
     {
         maxFar = std::min( zNear+sqrt(maxDist2), maxFar );
     }
@@ -558,29 +637,44 @@ OverlayDecorator::cullTerrainAndCalculateRTTParams(osgUtil::CullVisitor* cv,
         inverseMVP.invert(MVP);
     }
 
-    // calculate the new RTT matrices. All techniques will share the 
+    // calculate the new RTT matrices. All techniques will share the
     // same set. We could probably put these in the "shared" category
     // and use pointers..todo.
     osg::Matrix rttViewMatrix, rttProjMatrix;
 
     // for a camera that cares about geometry (like the draping technique) it's important
     // to include the geometry in the ortho-camera's Z range. But for a camera that just
-    // cares about the terrain depth (like the clamping technique) we want to constrain 
+    // cares about the terrain depth (like the clamping technique) we want to constrain
     // the Ortho Z as mush as possible in order to maintain depth precision. Perhaps
     // later we can split this out and have each technique calculation its own View and
     // Proj matrix.
 
     // For now: our RTT camera z range will be based on this equation:
-    double zspan = std::max(50000.0, hasl+25000.0);
+    double zspan = std::max(50000.0, fabs(hasl)+25000.0);
     osg::Vec3d up = camLook;
     if ( _isGeocentric )
     {
-        osg::Vec3d rttEye = eye+worldUp*zspan;
+        // Reflect the camera location across the spheres surface if it is underground
+        osg::Vec3d camref = camEye;
+        if( hasl < 0 )
+        {
+            camref = camEye - worldUp * 2.0 * hasl;
+        }
+        // rttEye should be above ground, so use the reflected camera location
+        osg::Vec3d rttEye = camref+worldUp*zspan;
         //establish a valid up vector
         osg::Vec3d rttLook = -rttEye;
         rttLook.normalize();
-        if ( fabs(rttLook * camLook) > 0.9999 )
-            up.set( camUp );
+        double dot = rttLook * camLook;
+        if ( dot > 0.999 )
+        {
+               up.set( camUp );
+        }
+        else if ( dot < -0.999 )
+        {
+            // Underground camera location
+            up.set( -camUp );
+        }
 
         // do NOT look at (0,0,0); must look down the ellipsoid up vector.
         rttViewMatrix.makeLookAt( rttEye, rttEye-worldUp*zspan, up );
@@ -588,10 +682,20 @@ OverlayDecorator::cullTerrainAndCalculateRTTParams(osgUtil::CullVisitor* cv,
     else
     {
         osg::Vec3d rttLook(0, 0, -1);
-        if ( fabs(rttLook * camLook) > 0.9999 )
-            up.set( camUp );
+        double dot = rttLook * camLook;
+        if ( dot > 0.999 )
+        {
+               up.set( camUp );
+        }
+        else if ( dot < -0.999 )
+        {
+            // Underground camera location
+            up.set( -camUp );
+        }
 
-        rttViewMatrix.makeLookAt( camEye + worldUp*zspan, camEye - worldUp*zspan, up );
+        // Reflect the camera location across the spheres surface if it is underground
+        osg::Vec3d camref = osg::Vec3d(camEye.x(), camEye.y(), fabs(camEye.z()));
+        rttViewMatrix.makeLookAt(  camref + worldUp*zspan, camref - worldUp*zspan, up );
     }
 
     // Build a polyhedron for the new frustum so we can slice it.
@@ -646,7 +750,7 @@ OverlayDecorator::cullTerrainAndCalculateRTTParams(osgUtil::CullVisitor* cv,
         if ( verts.size() > 0 )
         {
             // calculate an orthographic RTT projection matrix based on the view-space
-            // bounds of the vertex list (i.e. the extents surrounding the RTT camera 
+            // bounds of the vertex list (i.e. the extents surrounding the RTT camera
             // that bounds all the polyherdron verts in its XY plane)
             double xmin, ymin, xmax, ymax, maxDist;
             getExtentInSilhouette(rttViewMatrix, eye, verts, xmin, ymin, xmax, ymax, maxDist);
@@ -658,7 +762,7 @@ OverlayDecorator::cullTerrainAndCalculateRTTParams(osgUtil::CullVisitor* cv,
             if ( _isGeocentric )
                 dist = std::min(dist, eyeLen);
 
-            // Even through using xmin and xmax directly results in a tighter fit, 
+            // Even through using xmin and xmax directly results in a tighter fit,
             // it offsets the eyepoint from the center of the projection frustum.
             // This causes problems for the draping projection matrix optimizer, so
             // for now instead of re-doing that code we will just center the eyepoint
@@ -771,7 +875,7 @@ OverlayDecorator::getPerViewData(osg::Camera* key)
         initializePerViewData(pvd, key);
 
         return pvd;
-    }    
+    }
 }
 
 
@@ -780,7 +884,7 @@ OverlayDecorator::traverse( osg::NodeVisitor& nv )
 {
     bool defaultTraversal = true;
 
-    // in the CULL traversal, find the per-view data associated with the 
+    // in the CULL traversal, find the per-view data associated with the
     // cull visitor's current camera view and work with that:
     if ( nv.getVisitorType() == nv.CULL_VISITOR )
     {

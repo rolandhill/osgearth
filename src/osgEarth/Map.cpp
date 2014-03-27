@@ -1116,7 +1116,9 @@ Map::populateHeightField(osg::ref_ptr<osg::HeightField>& hf,
         key,
         convertToHAE ? _profileNoVDatum.get() : 0L,
         interp,
-        progress );
+        progress,
+        _rejectNoData,
+        _noDataHeight );
 }
 
 const SpatialReference*

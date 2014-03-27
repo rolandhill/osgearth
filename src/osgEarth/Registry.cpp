@@ -207,7 +207,7 @@ Registry::getGlobalGeodeticProfile() const
 {
     if ( !_global_geodetic_profile.valid() )
     {
-        GDAL_SCOPED_LOCK;
+//        GDAL_SCOPED_LOCK;
 
         if ( !_global_geodetic_profile.valid() ) // double-check pattern
         {
@@ -234,7 +234,7 @@ Registry::getSphericalMercatorProfile() const
 {
     if ( !_spherical_mercator_profile.valid() )
     {
-        GDAL_SCOPED_LOCK;
+//        GDAL_SCOPED_LOCK;
 
         if ( !_spherical_mercator_profile.valid() ) // double-check pattern
         {
@@ -257,7 +257,7 @@ Registry::getCubeProfile() const
 {
     if ( !_cube_profile.valid() )
     {
-        GDAL_SCOPED_LOCK;
+//        GDAL_SCOPED_LOCK;
 
         if ( !_cube_profile.valid() ) // double-check pattern
         {
