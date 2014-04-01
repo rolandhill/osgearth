@@ -1242,8 +1242,8 @@ public:
         double eps = 0.0001;
         if (osg::equivalent(x, 0, eps)) x = 0;
         if (osg::equivalent(y, 0, eps)) y = 0;
-        if (osg::equivalent(x, (double)_warpedDS->GetRasterXSize(), eps)) x = _warpedDS->GetRasterXSize();
-        if (osg::equivalent(y, (double)_warpedDS->GetRasterYSize(), eps)) y = _warpedDS->GetRasterYSize();
+        if (osg::equivalent(x, (double)_warpedDS->GetRasterXSize() - 1, eps)) x = _warpedDS->GetRasterXSize() - 1;
+        if (osg::equivalent(y, (double)_warpedDS->GetRasterYSize() - 1, eps)) y = _warpedDS->GetRasterYSize() - 1;
 
     }
 
