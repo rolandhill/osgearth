@@ -445,8 +445,8 @@ osg::HeightField*
 HeightFieldUtils::createReferenceHeightField(const GeoExtent& ex,
                                              unsigned         numCols,
                                              unsigned         numRows,
-                                             float            default_height,
-                                             bool             expressAsHAE)
+                                             bool             expressAsHAE,
+                                             float            default_height)
 {
     osg::HeightField* hf = new osg::HeightField();
     hf->allocate( numCols, numRows );

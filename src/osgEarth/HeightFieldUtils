@@ -148,8 +148,8 @@ namespace osgEarth
             const GeoExtent& ex,
             unsigned         numCols,
             unsigned         numRows,
-            float           default_height = 0.0f,
-            bool             expressHeightsAsHAE =true);
+            bool             expressHeightsAsHAE =true,
+            float           default_height = 0.0f);
 
         /**
          * Subsamples a heightfield to the specified extent.
