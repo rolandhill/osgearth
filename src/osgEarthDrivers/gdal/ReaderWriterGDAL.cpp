@@ -1277,11 +1277,14 @@ public:
             geoToPixel( intersection.xMin(), intersection.yMax(), src_min_x, src_min_y);
             geoToPixel( intersection.xMax(), intersection.yMin(), src_max_x, src_max_y);
 
+            int rasterWidth = _warpedDS->GetRasterXSize();
+            int rasterHeight = _warpedDS->GetRasterYSize();
+
             // Convert the doubles to integers.  We floor the mins and ceil the maximums to give the widest window possible.
-            src_min_x = floor(src_min_x);
-            src_min_y = floor(src_min_y);
-            src_max_x = ceil(src_max_x);
-            src_max_y = ceil(src_max_y);
+            src_min_x = osg::maximum( floor(src_min_x), 0.0 );
+            src_min_y = osg::maximum( floor(src_min_y), 0.0);
+            src_max_x = osg::minimum( ceil(src_max_x), (double)(rasterWidth - 1) );
+            src_max_y = osg::minimum( ceil(src_max_y), (double)(rasterHeight - 1) );
 
             int off_x = (int)( src_min_x );
             int off_y = (int)( src_min_y );
@@ -1289,8 +1292,6 @@ public:
             int height = (int)(src_max_y - src_min_y);
 
 
-            int rasterWidth = _warpedDS->GetRasterXSize();
-            int rasterHeight = _warpedDS->GetRasterYSize();
             if (off_x + width > rasterWidth || off_y + height > rasterHeight)
             {
                 OE_WARN << LC << "Read window outside of bounds of dataset.  Source Dimensions=" << rasterWidth << "x" << rasterHeight << " Read Window=" << off_x << ", " << off_y << " " << width << "x" << height << std::endl;
