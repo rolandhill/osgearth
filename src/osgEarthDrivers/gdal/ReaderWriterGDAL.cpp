@@ -776,7 +776,7 @@ public:
 
                 //Try to load the VRT file from the cache so we don't have to build it each time.
                 if (_cacheBin.valid())
-                {                
+                {
                     ReadResult result = _cacheBin->readString( vrtKey);
                     if (result.succeeded())
                     {
@@ -1055,8 +1055,8 @@ public:
         }
         else
         {
-            pixelToGeo(0.0, _warpedDS->GetRasterYSize(), minX, minY);
-            pixelToGeo(_warpedDS->GetRasterXSize(), 0.0, maxX, maxY);
+            pixelToGeo(0.0, _warpedDS->GetRasterYSize() + 1, minX, minY);
+            pixelToGeo(_warpedDS->GetRasterXSize() + 1, 0.0, maxX, maxY);
         }
 
         OE_DEBUG << LC << INDENT << "Geo extents: " << minX << ", " << minY << " -> " << maxX << ", " << maxY << std::endl;
