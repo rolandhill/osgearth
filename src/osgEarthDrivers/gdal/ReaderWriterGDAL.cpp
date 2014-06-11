@@ -1858,17 +1858,10 @@ public:
             int rasterHeight = _warpedDS->GetRasterYSize();
 
             // Convert the doubles to integers.  We floor the mins and ceil the maximums to give the widest window possible.
-#if 0
-            src_min_x = floor(src_min_x);
-            src_min_y = floor(src_min_y);
-            src_max_x = ceil(src_max_x);
-            src_max_y = ceil(src_max_y);
-#else
             src_min_x = round(src_min_x);
             src_min_y = round(src_min_y);
             src_max_x = round(src_max_x);
             src_max_y = round(src_max_y);
-#endif
 
             // We are now dealing with integer pixel values, so need to add 1 to get the width
             int width  = (int)(src_max_x - src_min_x) + 1;
@@ -1880,8 +1873,8 @@ public:
             int max_read_dimensions = 256;
 
             // Width of the GDAL target buffer. Will be modified later.
-            int target_width = width;
-            int target_height = height;
+            int target_width;
+            int target_height;
 
             // If the source window is large, then just read a sample from it using GDALs nearest neighbour algorithm. We will then sample from the result.
             if(width > max_read_dimensions)
