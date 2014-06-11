@@ -21,6 +21,7 @@
 
 #include "Common"
 #include "TileNode"
+#include "MPTerrainEngineNode"
 #include "TileNodeRegistry"
 #include <osg/Group>
 #include <osgEarth/ThreadingUtils>
@@ -53,10 +54,16 @@ namespace osgEarth { namespace Drivers { namespace MPTerrainEngine
     public: // internal
         void applyUpdate(osg::Node* node);
 
+        void resetUsedLastFrameFlags();
+
+        void GetDisplayedTilesForTarget(unsigned int x, unsigned int y, unsigned int lod, MPTerrainEngineNode::Side side, std::vector< TileNode* >& tnv);
+
     protected:
         virtual ~TileGroup() { }
 
         TileNode* getTileNode(unsigned q);
+
+        void CollectTargetTiles(unsigned int subtile,  int x, unsigned int y, unsigned int lod, MPTerrainEngineNode::Side side, std::vector< TileNode* >& tnv);
 
         osg::ref_ptr<osg::Node>        _updateAgent;
         mutable Threading::Mutex       _updateMutex;

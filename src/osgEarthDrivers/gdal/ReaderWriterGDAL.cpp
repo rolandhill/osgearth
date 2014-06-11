@@ -1037,9 +1037,9 @@ public:
             double ll_lon, ll_lat, ul_lon, ul_lat, ur_lon, ur_lat, lr_lon, lr_lat;
 
             pixelToGeo(0.0, 0.0, ul_lon, ul_lat );
-            pixelToGeo(0.0, _warpedDS->GetRasterYSize(), ll_lon, ll_lat);
-            pixelToGeo(_warpedDS->GetRasterXSize(), _warpedDS->GetRasterYSize(), lr_lon, lr_lat);
-            pixelToGeo(_warpedDS->GetRasterXSize(), 0.0, ur_lon, ur_lat);
+            pixelToGeo(0.0, _warpedDS->GetRasterYSize() + 1, ll_lon, ll_lat);
+            pixelToGeo(_warpedDS->GetRasterXSize() + 1, _warpedDS->GetRasterYSize() + 1, lr_lon, lr_lat);
+            pixelToGeo(_warpedDS->GetRasterXSize() + 1, 0.0, ur_lon, ur_lat);
 
             minX = osg::minimum( ll_lon, osg::minimum( ul_lon, osg::minimum( ur_lon, lr_lon ) ) );
             maxX = osg::maximum( ll_lon, osg::maximum( ul_lon, osg::maximum( ur_lon, lr_lon ) ) );
@@ -1057,8 +1057,8 @@ public:
         }
         else
         {
-            pixelToGeo(0.0, _warpedDS->GetRasterYSize(), minX, minY);
-            pixelToGeo(_warpedDS->GetRasterXSize(), 0.0, maxX, maxY);
+            pixelToGeo(0.0, _warpedDS->GetRasterYSize() + 1, minX, minY);
+            pixelToGeo(_warpedDS->GetRasterXSize() + 1, 0.0, maxX, maxY);
         }
 
         OE_DEBUG << LC << INDENT << "Geo extents: " << minX << ", " << minY << " -> " << maxX << ", " << maxY << std::endl;
@@ -1495,13 +1495,13 @@ public:
                 }
                 else
                 {
-                    for (int c = 0; c < tileSize; ++c) 
-                    { 
-                        double geoX = xmin + (dx * (double)c); 
-
                         for (int r = 0; r < tileSize; ++r) 
                         { 
                             double geoY   = ymin + (dy * (double)r); 
+
+                        for (int c = 0; c < tileSize; ++c)
+                        {
+                            double geoX = xmin + (dx * (double)c);
                             float  color = getInterpolatedValue(bandGray,geoX,geoY,false); 
 
                             *(image->data(c,r) + 0) = (unsigned char)color; 
@@ -1685,7 +1685,7 @@ public:
             if (!isValidValue(ulHeight, band)) ulHeight = 0.0f;
             if (!isValidValue(lrHeight, band)) lrHeight = 0.0f;
             */
-            if (!isValidValue(urHeight, band) || (!isValidValue(llHeight, band)) ||(!isValidValue(ulHeight, band)) || (!isValidValue(lrHeight, band)))
+            if ((!isValidValue(urHeight, band)) || (!isValidValue(llHeight, band)) ||(!isValidValue(ulHeight, band)) || (!isValidValue(lrHeight, band)))
             {
                 return NO_DATA_VALUE;
             }
@@ -1739,7 +1739,7 @@ public:
     }
 
 
-#if 1
+#if 0
     osg::HeightField* createHeightField( const TileKey&        key,
                                          ProgressCallback*     progress)
     {        
@@ -1774,12 +1774,12 @@ public:
             double dx = (xmax - xmin) / (tileSize-1);
             double dy = (ymax - ymin) / (tileSize-1);
 
-            for (int c = 0; c < tileSize; ++c)
-            {
-                double geoX = xmin + (dx * (double)c);
                 for (int r = 0; r < tileSize; ++r)
                 {
                     double geoY = ymin + (dy * (double)r);
+                for (int c = 0; c < tileSize; ++c)
+                {
+                    double geoX = xmin + (dx * (double)c);
                     float h = getInterpolatedValue(band, geoX, geoY);
                     hf->setHeight(c, r, h);
                 }
@@ -1854,45 +1854,86 @@ public:
             geoToPixel( intersection.xMin(), intersection.yMax(), src_min_x, src_min_y);
             geoToPixel( intersection.xMax(), intersection.yMin(), src_max_x, src_max_y);
 
-            // Convert the doubles to integers.  We floor the mins and ceil the maximums to give the widest window possible.
-            src_min_x = osg::maximum(0.0, floor(src_min_x - 1.0));
-            src_min_y = osg::maximum(0.0, floor(src_min_y - 1.0));
-            src_max_x = osg::minimum((double)_warpedDS->GetRasterXSize(), ceil(src_max_x + 1.0));
-            src_max_y = osg::minimum((double)_warpedDS->GetRasterYSize(), ceil(src_max_y + 1.0));
-            
-            int width  = (int)(src_max_x - src_min_x);
-            int height = (int)(src_max_y - src_min_y);      
-
             int rasterWidth = _warpedDS->GetRasterXSize();
             int rasterHeight = _warpedDS->GetRasterYSize();
-            if (src_min_x + width > rasterWidth || src_min_y + height > rasterHeight)
+
+            // Convert the doubles to integers.  We floor the mins and ceil the maximums to give the widest window possible.
+            src_min_x = floor(src_min_x);
+            src_min_y = floor(src_min_y);
+            src_max_x = ceil(src_max_x);
+            src_max_y = ceil(src_max_y);
+            
+            // We are now dealing with integer pixel values, so need to add 1 to get the width
+            int width  = (int)(src_max_x - src_min_x) + 1;
+            int height = (int)(src_max_y - src_min_y) + 1;
+
+            // Don't read anything greater than a dimension of max_read_dimensions.  If the source window is really large it will use
+            // GDAL's nearest neighbor sampling.  If the source window is < max_read_dimensions x max_read_dimensions then the exact source data is read and
+            // resampled.  This make sure that once get into high enough resolution data the verts don't move around on you due to sampling.
+            int max_read_dimensions = 256;
+
+            // Width of the GDAL target buffer. Will be modified later.
+            int target_width = width;
+            int target_height = height;
+
+            // If the source window is large, then just read a sample from it using GDALs nearest neighbour algorithm. We will then sample from the result.
+            if(width > max_read_dimensions)
             {
-                OE_WARN << LC << "Read window outside of bounds of dataset.  Source Dimensions=" << rasterWidth << "x" << rasterHeight << " Read Window=" << src_min_x << ", " << src_min_y << " " << width << "x" << height << std::endl;
+                target_width = max_read_dimensions;
+                // Figure out how many source pixels equate to half a read buffer cell.
+                double dx = ((double)width) / ((double)target_width) * 0.5;
+                //Inflate the source read window by half a target buffer cell. There are two reasons for this:
+                // 1) Later we will deflate our read window by the same amount, so if we don't do this here there will be an apparent gap between tiles.
+                // 2) GDAL will start reading half way along the first target buffer cell and finish reading half way along the last.
+                //     We want the the nearest neighbour to that point to be right on the tile boundary so that the boundary values are the same on neighbouring tiles.
+                src_min_x = osg::maximum((int)floor(src_min_x - dx), 0);
+                src_max_x = osg::minimum((int)ceil(src_max_x + dx), rasterWidth - 1);
+                // Need to recalc width.
+                width = (int)(src_max_x - src_min_x) + 1;
+            }
+            else
+            {
+                // Inflate the source window by one cell. Source pixels are read exactly, so don't need to worry about GDAL sub sampling.
+                src_min_x = osg::maximum((int)src_min_x - 1, 0);
+                src_max_x = osg::minimum((int)src_max_x + 1, rasterWidth - 1);
+                // Need to recalc width.
+                width = (int)(src_max_x - src_min_x) + 1;
             }
 
-            // Don't read anything greater than a dimension of 1000.  If the source window is really large it will use
-            // GDAL's nearest neighbor sampling.  If the source window is < 1000x1000 then the exact source data is read and 
-            // resampled.  This make sure that once get into high enough resolution data the verts don't move around on you due to sampling.
-            int max_read_dimensions = 1000;
-            int target_width = osg::minimum( max_read_dimensions, width );
-            int target_height = osg::minimum( max_read_dimensions, height );
-
-            //Return if parameters are out of range.
-            if (width <= 0 || height <= 0 || target_width <= 0 || target_height <= 0)
+            if(height > max_read_dimensions)
             {
-                return 0;
+                target_height = max_read_dimensions;
+                // Figure out how many source pixels equate to half a read buffer cell.
+                double dy =  ((double)height) / ((double)target_height) * 0.5;
+                //Inflate the source read window by half a target buffer cell. There are two reasons for this:
+                // 1) Later we will deflate our read window by the same amount, so if we don't do this here there will be an apparent gap between tiles.
+                // 2) GDAL will start reading half way along the first target buffer cell and finish reading half way along the last.
+                //     We want the the nearest neighbour to that point to be right on the tile boundary so that the boundary values are the same on neighbouring tiles.
+                src_min_y = osg::maximum((int)floor(src_min_y - dy), 0);
+                src_max_y = osg::minimum((int)ceil(src_max_y + dy), rasterHeight - 1);
+                // Need to recalc height.
+                height = (int)(src_max_y - src_min_y) + 1;
+            }
+            else
+            {
+                // Inflate the source window by one cell. Source pixels are read exactly, so don't need to worry about GDAL sub sampling.
+                src_min_y = osg::maximum((int)src_min_y - 1, 0);
+                src_max_y = osg::minimum((int)src_max_y + 1, rasterHeight - 1);
+                // Need to recalc height.
+                height = (int)(src_max_y - src_min_y) + 1;
             }            
 
-            OE_DEBUG << LC << "Reading key " << key.str() << std::endl;
+            OE_DEBUG << LC << "Reading key " << key.str() << "   " << xmin << ", " << ymin << ", " << xmax << ", " << ymax << ", " << std::endl;
             OE_DEBUG << LC << "ReadWindow " << src_min_x << "," << src_min_y << " " << width << "x" << height << std::endl;
             OE_DEBUG << LC << "DestWindowSize " << target_width << "x" << target_height << std::endl;                        
 
             // Figure out the true pixel extents of what we read
             double read_min_x, read_min_y, read_max_x, read_max_y;
             pixelToGeo(src_min_x, src_min_y, read_min_x, read_max_y);
-            pixelToGeo(src_min_x + width, src_min_y + height, read_max_x, read_min_y);
+            // True extents extends to the far side of the last pixel and line.
+            pixelToGeo(src_max_x + 1, src_max_y + 1, read_max_x, read_min_y);
 
-            // We need to deflate the size of the extents by the width of 0.5 pixel to get the correct extents of the heightfield since it's 
+            // We need to deflate the size of the extents by the width of 0.5 'target buffer' pixel to get the correct extents of the heightfield since it's
             // sampled at the center of the pixels and not the outside edges.
             double half_dx = ((read_max_x - read_min_x)/((double)target_width)) / 2.0;
             double half_dy = ((read_max_y - read_min_y)/((double)target_height)) / 2.0;

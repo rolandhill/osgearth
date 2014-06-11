@@ -32,6 +32,8 @@ using namespace osgEarth;
 
 namespace osgEarth { namespace Drivers { namespace MPTerrainEngine
 {
+    class MPTerrainEngineNode;
+
     class SingleKeyNodeFactory : public KeyNodeFactory
     {
     public:
@@ -61,6 +63,8 @@ namespace osgEarth { namespace Drivers { namespace MPTerrainEngine
          */
         osg::Node* createNode( const TileKey& key, bool setupChildren, ProgressCallback* progress );
 
+        void setTerrainEngineNode( MPTerrainEngineNode* ten) { _terrainEngineNode = ten; }
+
     protected:
         osg::Node* createTile(TileModel* model, bool setupChildren);
 
@@ -73,6 +77,7 @@ namespace osgEarth { namespace Drivers { namespace MPTerrainEngine
         UID                                 _engineUID;
 
         unsigned getMinimumRequiredLevel();
+        osg::ref_ptr<MPTerrainEngineNode> _terrainEngineNode;
     };
 
 } } } // namespace osgEarth::Drivers::MPTerrainEngine

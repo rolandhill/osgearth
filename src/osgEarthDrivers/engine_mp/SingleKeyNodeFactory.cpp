@@ -67,6 +67,7 @@ SingleKeyNodeFactory::createTile(TileModel* model, bool setupChildrenIfNecessary
 {
     // compile the model into a node:
     TileNode* tileNode = _modelCompiler->compile( model, _frame );
+    tileNode->setTerrainEngineNode( _terrainEngineNode.get() );
 
     // see if this tile might have children.
     bool prepareForChildren =
@@ -160,7 +161,7 @@ SingleKeyNodeFactory::createNode(const TileKey&    key,
             return 0L;
         
         TileKey child = key.createChildKey(q);
-        _modelFactory->createTileModel( child, _frame, model[q], progress );
+        _modelFactory->createTileModel( child, _frame, model[q], progress, _options.noDataHeight().value() );
 
         // if any one of the TileModel creations fail, we will be unable to build
         // this quadtile. So goodbye.
@@ -212,14 +213,15 @@ SingleKeyNodeFactory::createNode(const TileKey&    key,
 
     if ( makeTile )
     {
-        if ( _options.incrementalUpdate() == true )
-        {
+    // To use TileStitching we always need to have a TileGroup
+//        if ( _options.incrementalUpdate() == true )
+//        {
             quad = new TileGroup(key, _engineUID, _liveTiles.get(), _deadTiles.get());
-        }
-        else
-        {
-            quad = new osg::Group();
-        }
+//        }
+//        else
+//        {
+//            quad = new osg::Group();
+//        }
 
         for( unsigned q=0; q<4; ++q )
         {

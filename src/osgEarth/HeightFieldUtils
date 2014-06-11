@@ -148,7 +148,8 @@ namespace osgEarth
             const GeoExtent& ex, 
             unsigned         numCols,
             unsigned         numRows,
-            bool             expressHeightsAsHAE =true);
+            bool             expressHeightsAsHAE =true,
+            float           default_height = 0.0f);
 
         /**
          * Subsamples a heightfield to the specified extent.
@@ -178,7 +179,8 @@ namespace osgEarth
             osg::HeightField* grid,
             const GeoExtent&  extent,
             float             invalidValue,
-            const Geoid*      geoid );
+            const Geoid*      geoid,
+            float default_height = 0.0f);
         
         /**
          * Creates a new cluster culler based on a heightfield.

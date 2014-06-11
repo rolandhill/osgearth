@@ -1,0 +1,10 @@
+*~
+*.depend
+*.layout
+*.workspace
+*.cscope_file_list
+*.diff
+bin/
+obj/
+build/
+buildd/
