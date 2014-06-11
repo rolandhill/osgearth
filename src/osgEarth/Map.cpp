@@ -1072,7 +1072,7 @@ Map::createReferenceHeightField(const TileKey& key,
                                 bool           expressHeightsAsHAE) const
 {
     unsigned size = std::max(*_mapOptions.elevationTileSize(), 2u);
-    return HeightFieldUtils::createReferenceHeightField(key.getExtent(), size, size, expressHeightsAsHAE);
+    return HeightFieldUtils::createReferenceHeightField(key.getExtent(), size, size, expressHeightsAsHAE, _noDataHeight);
 }
 
 

@@ -53,6 +53,33 @@ namespace osgEarth { namespace Drivers { namespace MPTerrainEngine
         /** Creates a tile node with no support for paging in subtiles. */
         osg::Node* createStandaloneNode(const TileKey& key, ProgressCallback* progress =0L);
 
+        /** Used during tile stitching to signify which sides need to be modified. */
+        enum Side
+        {
+            Side_W = 0x1,
+            Side_N = 0x1 << 1,
+            Side_E = 0x1 << 2,
+            Side_S = 0x1 << 3,
+            Side_All = Side_W | Side_N | Side_E | Side_S
+        } ;
+
+        struct ChangedTile
+        {
+            ChangedTile(TileNode* tn, int is) { _tilenode = tn; _side = is; }
+            osg::ref_ptr<TileNode> _tilenode;
+            int _side;
+        };
+
+        /** Add a tile to the register of tiles that have changed during the last traverse. */
+        void RegisterChangedTileNode(TileNode* tilenode, Side side);
+
+        /** Build a list of recently changed tiles that will require modification to stitch to a different LOD neighbour. */
+        void BuildTileUpdateVec();
+
+        void MarkBoundingTiles(TileNode* tilenode, Side side, unsigned int tilesPerLod0Tile, unsigned int numTilesX0, unsigned int numTilesY0);
+
+        void QueueTileForUpdate(TileNode* tilenode, Side side, TileNode* target);
+
     public: // TerrainEngineNode
 
         // for standalone tile creation outside of a terrain
@@ -158,6 +185,10 @@ namespace osgEarth { namespace Drivers { namespace MPTerrainEngine
         osg::Uniform* _verticalScaleUniform;
 
         osg::ref_ptr< TileModelFactory > _tileModelFactory;
+
+        std::vector< ChangedTile > _changedTiles;
+
+        std::vector< osg::ref_ptr<TileNode> > _tilesToUpdate;
 
         MPTerrainEngineNode( const MPTerrainEngineNode& rhs, const osg::CopyOp& op =osg::CopyOp::DEEP_COPY_ALL ) { }
     };

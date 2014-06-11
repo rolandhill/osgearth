@@ -678,6 +678,13 @@ namespace
             }
         }
 
+        // Trim some arrays
+        d.surfaceVerts->trim();
+        d.renderTileCoords->trim();
+        d.normals->trim();
+        d.surfaceAttribs->trim();
+        d.surfaceAttribs2->trim();
+
         //if ( d.renderLayers[0]._texCoords->size() < d.surfaceVerts->size() )
         //{
         //    OE_WARN << LC << "not good. mask error." << std::endl;
@@ -2059,7 +2066,7 @@ TileModelCompiler::compile(const TileModel* model,
     installRenderData( d );
 
     // performance optimizations.
-    optimize( d );
+//    optimize( d );
 
 #if 0 // this is covered by the opt above.
     // convert mask geometry to tris.
@@ -2083,6 +2090,14 @@ TileModelCompiler::compile(const TileModel* model,
     // NOTE: cannot set this until optimizations (above) are complete
     SetDataVarianceVisitor sdv( osg::Object::DYNAMIC );
     tile->accept( sdv );
+
+    // Store the index data in the TileNode so we can match HeightField X & Y to its corresponding vertex
+    std::vector< short >& indices = tile->getIndices();
+    Indices::iterator iit;
+    for(iit = d.indices.begin(); iit != d.indices.end(); iit++)
+    {
+        indices.push_back((short) *iit);
+    }
 
     return tile;
 }

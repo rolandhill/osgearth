@@ -65,7 +65,8 @@ TileModel::ElevationData::getHeight(const osg::Vec3d&      ndc,
     osg::Vec3d hf_ndc;
     GeoLocator::convertLocalCoordBetween( *ndcLocator, ndc, *_locator.get(), hf_ndc );
     output = HeightFieldUtils::getHeightAtNormalizedLocation( _hf.get(), hf_ndc.x(), hf_ndc.y(), interp );
-    return true;
+
+    return (output != NO_DATA_VALUE);
 }
 
 bool
@@ -96,13 +97,16 @@ TileModel::ElevationData::getNormal(const osg::Vec3d&      ndc,
     osg::Vec3d north( hf_ndc.x(), hf_ndc.y()+yres, 0.0 );
 
     if (!HeightFieldUtils::getHeightAtNormalizedLocation(_neighbors, west.x(),  west.y(),  west.z(), interp))
-        west.z() = centerHeight;
+        west.z() = FLT_MAX;
     if (!HeightFieldUtils::getHeightAtNormalizedLocation(_neighbors, east.x(),  east.y(),  east.z(), interp))
-        east.z() = centerHeight;
+        east.z() = west.z();
     if (!HeightFieldUtils::getHeightAtNormalizedLocation(_neighbors, south.x(), south.y(), south.z(), interp))
-        south.z() = centerHeight;
+        south.z() = FLT_MAX;
     if (!HeightFieldUtils::getHeightAtNormalizedLocation(_neighbors, north.x(), north.y(), north.z(), interp))
-        north.z() = centerHeight;
+        north.z() = south.z();
+
+    if(west.z() == -FLT_MAX) west.z() = east.z();
+    if(south.z() == -FLT_MAX) south.z() = north.z();
 
     osg::Vec3d westWorld, eastWorld, southWorld, northWorld;
     _locator->unitToModel(west,  westWorld);

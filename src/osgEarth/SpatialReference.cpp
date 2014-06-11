@@ -624,7 +624,7 @@ SpatialReference::_isEquivalentTo( const SpatialReference* rhs, bool considerVDa
 
     // last resort, since it requires the lock
     {
-        GDAL_SCOPED_LOCK;
+//        GDAL_SCOPED_LOCK;
         return TRUE == ::OSRIsSame( _handle, rhs->_handle );
     }
 }
@@ -1128,7 +1128,7 @@ SpatialReference::transformXYPointArrays(double*  x,
                                          const SpatialReference* out_srs) const
 {  
     // Transform the X and Y values inside an exclusive GDAL/OGR lock
-    GDAL_SCOPED_LOCK;
+//    GDAL_SCOPED_LOCK;
 
     void* xform_handle = NULL;
     TransformHandleCache::const_iterator itr = _transformHandleCache.find(out_srs->getWKT());
