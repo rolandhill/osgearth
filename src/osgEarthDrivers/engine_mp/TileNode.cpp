@@ -119,7 +119,7 @@ TileNode::traverse( osg::NodeVisitor& nv )
         {
             _model->updateTraverse(nv);
         }
-    }    
+    }
 
     osg::MatrixTransform::traverse( nv );
 }
@@ -204,77 +204,29 @@ void TileNode::CheckOrphanedBoundaries()
 }
 
 void
-TileNode::AdjustEdges(bool sameLod)
+TileNode::AdjustEdges()
 {
     osg::Vec3d center = getMatrix().getTrans();
 
     // Check each boundary to see if an adjustment is required
     if(_boundTileW_pending.valid())
     {
-        // Don't try to match adjoining tiles with the same LOD, just reset them.
-        if(sameLod && getTileModel()->_tileKey.getLOD() == _boundTileW_pending->getTileModel()->_tileKey.getLOD())
-        {
-            ResetEdgeW();
-            // Reset the adjoinging edge of our same-lod neighbour if it hasn't already been reset.
-            if(_boundTileW_pending->getBoundTileE())
-            {
-                _boundTileW_pending->ResetEdgeE();
-                _boundTileW_pending->setBoundTileE(0L);
-            }
-            _boundTileW_pending = 0L;
-        }
-        else if(!sameLod && getTileModel()->_tileKey.getLOD() != _boundTileW_pending->getTileModel()->_tileKey.getLOD()) AdjustEdgeW(center);
+        AdjustEdgeW(center);
     }
 
     if(_boundTileN_pending.valid())
     {
-        // Don't try to match adjoining tiles with the same LOD, just reset them.
-        if(sameLod && getTileModel()->_tileKey.getLOD() == _boundTileN_pending->getTileModel()->_tileKey.getLOD())
-        {
-            ResetEdgeN();
-            // Reset the adjoinging edge of our same-lod neighbour if it hasn't already been reset.
-            if(_boundTileN_pending->getBoundTileS())
-            {
-                _boundTileN_pending->ResetEdgeS();
-                _boundTileN_pending->setBoundTileS(0L);
-            }
-            _boundTileN_pending = 0L;
-        }
-        else if(!sameLod && getTileModel()->_tileKey.getLOD() != _boundTileN_pending->getTileModel()->_tileKey.getLOD()) AdjustEdgeN(center);
+        AdjustEdgeN(center);
     }
 
     if(_boundTileE_pending.valid())
     {
-        // Don't try to match adjoining tiles with the same LOD, just reset them.
-        if(sameLod && getTileModel()->_tileKey.getLOD() == _boundTileE_pending->getTileModel()->_tileKey.getLOD())
-        {
-            ResetEdgeE();
-            // Reset the adjoinging edge of our same-lod neighbour if it hasn't already been reset.
-            if(_boundTileE_pending->getBoundTileW())
-            {
-                _boundTileE_pending->ResetEdgeW();
-                _boundTileE_pending->setBoundTileW(0L);
-            }
-            _boundTileE_pending = 0L;
-        }
-        else if(!sameLod && getTileModel()->_tileKey.getLOD() != _boundTileE_pending->getTileModel()->_tileKey.getLOD()) AdjustEdgeE(center);
+        AdjustEdgeE(center);
     }
 
     if(_boundTileS_pending.valid())
     {
-        // Don't try to match adjoining tiles with the same LOD, just reset them.
-        if(sameLod && getTileModel()->_tileKey.getLOD() == _boundTileS_pending->getTileModel()->_tileKey.getLOD())
-        {
-            ResetEdgeS();
-            // Reset the adjoinging edge of our same-lod neighbour if it hasn't already been reset.
-            if(_boundTileS_pending->getBoundTileN())
-            {
-                _boundTileS_pending->ResetEdgeN();
-                _boundTileS_pending->setBoundTileN(0L);
-            }
-            _boundTileS_pending = 0L;
-        }
-        else if(!sameLod && getTileModel()->_tileKey.getLOD() != _boundTileS_pending->getTileModel()->_tileKey.getLOD()) AdjustEdgeS(center);
+        AdjustEdgeS(center);
     }
 
 }
