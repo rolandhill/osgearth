@@ -70,7 +70,7 @@ namespace osgEarth { namespace Drivers { namespace MPTerrainEngine
 
         /**
          * Sets the last traversal frame manually. A parent TileGroup
-         * will call this to prevent the born-time from resetting 
+         * will call this to prevent the born-time from resetting
          * when traversing the tile's children.
          */
         void setLastTraversalFrame(unsigned frame);
@@ -133,11 +133,8 @@ namespace osgEarth { namespace Drivers { namespace MPTerrainEngine
 
         /**
         * Adjust all the edges to match the boundary tiles as set by the _boundTile?_pending members.
-        * Two modes exist:
-        *   1) Only adjust tiles with a boundary at the same LOD
-        *   2) Only adjust tiles with a boundary at a different LOD
         */
-		void AdjustEdges(bool sameLod);
+		void AdjustEdges();
 
         /**
         * Check if boundary tiles are still being used in the display and reset any edge adjustments if they are not.
