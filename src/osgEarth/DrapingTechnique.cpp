@@ -122,7 +122,7 @@ namespace
             // optimize because the camera is looking downish and the existing
             // rectangular volume is sufficient.
             osg::Vec3d eyeClip = params._eyeWorld * rttMVP;
-            if ( (eyeClip.y() >= -1.0 && eyeClip.y()) <= 1.0 || (eyeClip.x() >= -1.0 && eyeClip.x() <= 1.0) )
+            if ( (eyeClip.y() >= -1.0 && eyeClip.y() <= 1.0) || (eyeClip.x() >= -1.0 && eyeClip.x() <= 1.0) )
             {
                 return;
             }
