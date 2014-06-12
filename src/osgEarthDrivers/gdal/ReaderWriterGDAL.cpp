@@ -195,7 +195,7 @@ getFiles(const std::string &file, const std::vector<std::string> &exts, const st
 static GDALDatasetH
 build_vrt(std::vector<std::string> &files, ResolutionStrategy resolutionStrategy)
 {
-    GDAL_SCOPED_LOCK;
+//    GDAL_SCOPED_LOCK;
 
     char* projectionRef = NULL;
     int nBands = 0;
@@ -634,7 +634,7 @@ public:
 
     virtual ~GDALTileSource()
     {
-        GDAL_SCOPED_LOCK;
+        GDAL_DS_SCOPED_LOCK;
 
         // Close the _warpedDS dataset if :
         // - it exists
@@ -671,7 +671,7 @@ public:
 
     Status initialize( const osgDB::Options* dbOptions )
     {
-        GDAL_SCOPED_LOCK;
+        GDAL_DS_SCOPED_LOCK;
 
         Cache* cache = 0;
 
@@ -1124,7 +1124,7 @@ public:
     */
     static GDALRasterBand* findBandByColorInterp(GDALDataset *ds, GDALColorInterp colorInterp)
     {
-        GDAL_SCOPED_LOCK;
+//        GDAL_SCOPED_LOCK;
 
         for (int i = 1; i <= ds->GetRasterCount(); ++i)
         {
@@ -1135,7 +1135,7 @@ public:
 
     static GDALRasterBand* findBandByDataType(GDALDataset *ds, GDALDataType dataType)
     {
-        GDAL_SCOPED_LOCK;
+//        GDAL_SCOPED_LOCK;
 
         for (int i = 1; i <= ds->GetRasterCount(); ++i)
         {
@@ -1252,7 +1252,7 @@ public:
             return NULL;
         }
 
-        GDAL_SCOPED_LOCK;
+        GDAL_DS_SCOPED_LOCK;
 
         int tileSize = _options.tileSize().value();
 
@@ -1585,7 +1585,7 @@ public:
 
     bool isValidValue(float v, GDALRasterBand* band)
     {
-        GDAL_SCOPED_LOCK;
+//        GDAL_SCOPED_LOCK;
 
         float bandNoData = -32767.0f;
         int success;
@@ -1747,7 +1747,7 @@ public:
             return NULL;
         }
 
-        GDAL_SCOPED_LOCK;
+        GDAL_DS_SCOPED_LOCK;
 
         int tileSize = _options.tileSize().value();
 
@@ -1828,7 +1828,7 @@ public:
             return NULL;
         }
 
-        GDAL_SCOPED_LOCK;
+        GDAL_DS_SCOPED_LOCK;
 
         int tileSize = _options.tileSize().value();
 
