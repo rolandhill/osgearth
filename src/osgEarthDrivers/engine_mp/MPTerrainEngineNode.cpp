@@ -132,7 +132,7 @@ MPTerrainEngineNode::unregisterEngine( UID uid )
 }
 
 // since this method is called in a database pager thread, we use a ref_ptr output
-// parameter to avoid the engine node being destructed between the time we 
+// parameter to avoid the engine node being destructed between the time we
 // return it and the time it's accessed; this could happen if the user removed the
 // MapNode from the scene during paging.
 void
@@ -227,7 +227,7 @@ MPTerrainEngineNode::postInitialize( const Map* map, const TerrainOptions& optio
     {
         _deadTiles = new TileNodeRegistry("dead");
     }
-    
+
     // initialize the model factory:
     _tileModelFactory = new TileModelFactory(_liveTiles.get(), _terrainOptions );
 
@@ -299,7 +299,7 @@ MPTerrainEngineNode::invalidateRegion(const GeoExtent& extent,
         {
             extent.transform(this->getMap()->getSRS(), extentLocal);
         }
-        
+
         _liveTiles->setDirty(extentLocal, minLevel, maxLevel);
     }
 }
@@ -432,7 +432,7 @@ MPTerrainEngineNode::traverse(osg::NodeVisitor& nv)
 {
     if ( nv.getVisitorType() == nv.CULL_VISITOR )
     {
-        // since the root tiles are manually added, the pager never has a chance to 
+        // since the root tiles are manually added, the pager never has a chance to
         // register the PagedLODs in their children. So we have to do it manually here.
         if ( !_rootTilesRegistered )
         {
@@ -485,12 +485,7 @@ MPTerrainEngineNode::traverse(osg::NodeVisitor& nv)
 
         for(it = _tilesToUpdate.begin(); it != _tilesToUpdate.end(); it++)
         {
-            (*it)->AdjustEdges(true);
-        }
-
-        for(it = _tilesToUpdate.begin(); it != _tilesToUpdate.end(); it++)
-        {
-            (*it)->AdjustEdges(false);
+            (*it)->AdjustEdges();
         }
 
         _tilesToUpdate.clear();
@@ -505,7 +500,7 @@ MPTerrainEngineNode::getKeyNodeFactory()
     if ( !knf.valid() )
     {
         // create a compiler for compiling tile models into geometry
-        bool optimizeTriangleOrientation = 
+        bool optimizeTriangleOrientation =
             getMap()->getMapOptions().elevationInterpolation() != INTERP_TRIANGULATE;
 
         // A compiler specific to this thread:
@@ -625,7 +620,7 @@ MPTerrainEngineNode::onMapModelChanged( const MapModelChange& change )
             case MapModelChange::ADD_MODEL_LAYER:
             case MapModelChange::REMOVE_MODEL_LAYER:
             case MapModelChange::MOVE_MODEL_LAYER:
-            default: 
+            default:
                 break;
             }
         }
@@ -729,13 +724,13 @@ MPTerrainEngineNode::updateState()
     else
     {
         osg::StateSet* terrainStateSet = _terrain->getOrCreateStateSet();
-        
+
         // required for multipass tile rendering to work
         terrainStateSet->setAttributeAndModes(
             new osg::Depth(osg::Depth::LEQUAL, 0, 1, true) );
 
         // activate standard mix blending.
-        terrainStateSet->setAttributeAndModes( 
+        terrainStateSet->setAttributeAndModes(
             new osg::BlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA),
             osg::StateAttribute::ON );
 
@@ -864,7 +859,7 @@ MPTerrainEngineNode::updateState()
             }
 
             // binding for the terrain texture
-            terrainStateSet->getOrCreateUniform( 
+            terrainStateSet->getOrCreateUniform(
                 "oe_layer_tex", osg::Uniform::SAMPLER_2D )->set( _primaryUnit );
 
             // binding for the secondary texture (for LOD blending)
@@ -967,7 +962,7 @@ MPTerrainEngineNode::MarkBoundingTiles(TileNode* tilenode, Side side, unsigned i
     unsigned int x = key.getTileX();
     unsigned int y = key.getTileY();
 
-    // Calcualte target neighbour at the same LOD
+    // Calculate target neighbour at the same LOD
     // We don't need to worry about going outside the tile limits as this was handled in BuildTileUpdateVec
     unsigned int tx = x;
     unsigned int ty = y;
