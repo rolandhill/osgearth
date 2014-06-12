@@ -34,6 +34,7 @@
 #include <sstream>
 #include <stdlib.h>
 #include <memory.h>
+#include <math.h>
 
 #include <gdal_priv.h>
 #include <gdalwarper.h>
