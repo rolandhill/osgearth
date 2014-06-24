@@ -74,9 +74,9 @@ namespace osgEarth { namespace Drivers { namespace MPTerrainEngine
         void RegisterChangedTileNode(TileNode* tilenode, Side side);
 
         /** Build a list of recently changed tiles that will require modification to stitch to a different LOD neighbour. */
-        void BuildTileUpdateVec();
+        void BuildTileUpdateVec(unsigned int framenumber);
 
-        void MarkBoundingTiles(TileNode* tilenode, Side side, unsigned int tilesPerLod0Tile, unsigned int numTilesX0, unsigned int numTilesY0);
+        void MarkBoundingTiles(TileNode* tilenode, Side side, unsigned int tilesPerLod0Tile, unsigned int numTilesX0, unsigned int numTilesY0, unsigned int framenumber);
 
         void QueueTileForUpdate(TileNode* tilenode, Side side, TileNode* target);
 
@@ -84,7 +84,7 @@ namespace osgEarth { namespace Drivers { namespace MPTerrainEngine
 
         // for standalone tile creation outside of a terrain
         osg::Node* createTile(const TileKey& key);
-        
+
         // when incremental update is enabled, forces regeneration of tiles
         // in the given region.
         void invalidateRegion(
@@ -110,7 +110,7 @@ namespace osgEarth { namespace Drivers { namespace MPTerrainEngine
 
         UID getUID() const;
 
-    public: // statics    
+    public: // statics
         static void registerEngine( MPTerrainEngineNode* engineNode );
         static void unregisterEngine( UID uid );
         static void getEngineByUID( UID uid, osg::ref_ptr<MPTerrainEngineNode>& output );
@@ -148,8 +148,8 @@ namespace osgEarth { namespace Drivers { namespace MPTerrainEngine
 
         void moveImageLayer( unsigned int oldIndex, unsigned int newIndex );
         void moveElevationLayer( unsigned int oldIndex, unsigned int newIndex );
-        
-        void updateState(); 
+
+        void updateState();
 
     private:
         MPTerrainEngineOptions _terrainOptions;
@@ -188,7 +188,7 @@ namespace osgEarth { namespace Drivers { namespace MPTerrainEngine
 
         std::vector< ChangedTile > _changedTiles;
 
-        std::vector< osg::ref_ptr<TileNode> > _tilesToUpdate;
+        TileNodeVector _tilesToUpdate;
 
         MPTerrainEngineNode( const MPTerrainEngineNode& rhs, const osg::CopyOp& op =osg::CopyOp::DEEP_COPY_ALL ) { }
     };
