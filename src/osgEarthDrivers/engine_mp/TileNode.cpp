@@ -45,7 +45,7 @@ _outOfDate         ( false )
 {
     this->setName( key.str() );
 
-    _usedLastFrame = false;
+    _frameNumber = 0;
     _terrainEngineNode = 0L;
 
     // revisions are initially in sync:
@@ -83,24 +83,13 @@ TileNode::traverse( osg::NodeVisitor& nv )
             // If this tile is being traversed, then it is being used in display.
             // We therefore notify the TerrainEngineNode if it is being turned on from off.
             // We also need to reset the UsedLastFrame flags for higher LODs.
-            if(!_usedLastFrame)
+            if( _frameNumber != nv.getFrameStamp()->getFrameNumber() )
             {
                 if(isValid()) _terrainEngineNode->RegisterChangedTileNode(this, MPTerrainEngineNode::Side_All);
-
-                // Reset the UsedLastFrame flags below the sibling TileGroups (if they exist)
-                TilePagedLOD* tpl = dynamic_cast<TilePagedLOD*>(getParent(0));
-                if(tpl && tpl->getNumChildren() > 1)
-                {
-                    TileGroup* tg = dynamic_cast<TileGroup*>(tpl->getChild(1));
-                    if(tg)
-                    {
-                        tg->resetUsedLastFrameFlags();
-                    }
-                }
             }
 
-            // Flag that this tile is being displayed
-            _usedLastFrame = true;
+            // Update the frame number when this tile was last displayed
+            _frameNumber = nv.getFrameStamp()->getFrameNumber();
 
             osg::ClusterCullingCallback* ccc = dynamic_cast<osg::ClusterCullingCallback*>(getCullCallback());
             if (ccc)
@@ -142,19 +131,6 @@ TileNode::resizeGLObjectBuffers(unsigned maxSize)
         const_cast<TileModel*>(_model.get())->resizeGLObjectBuffers( maxSize );
 }
 
-void
-TileNode::resetUsedLastFrameFlag()
-{
-    // Flag that this tile is not being used
-    _usedLastFrame = false;
-
-    // Reset pending operations
-    _boundTileW_pending = 0L;
-    _boundTileN_pending = 0L;
-    _boundTileE_pending = 0L;
-    _boundTileS_pending = 0L;
-}
-
 osg::Vec3Array*
 TileNode::getVertexArray()
 {
@@ -179,25 +155,25 @@ TileNode::getVertexArray()
     return va;
 }
 
-void TileNode::CheckOrphanedBoundaries()
+void TileNode::CheckOrphanedBoundaries(unsigned int framenumber)
 {
-    //Check if the boundry tiles are still being used in display. If not, then remove any adjustments that may have been made
-    if(_boundTileW.valid() && !_boundTileW->getUsedLastFrame())
+    //Check if the boundary tiles are still being used in display. If not, then remove any adjustments that may have been made
+    if(_boundTileW.valid() && framenumber != _boundTileW->getFrameNumber())
     {
         ResetEdgeW();
     }
 
-    if(_boundTileN.valid() && !_boundTileN->getUsedLastFrame())
+    if(_boundTileN.valid() && framenumber != _boundTileN->getFrameNumber())
     {
         ResetEdgeN();
     }
 
-    if(_boundTileE.valid() && !_boundTileE->getUsedLastFrame())
+    if(_boundTileE.valid() && framenumber != _boundTileE->getFrameNumber())
     {
         ResetEdgeE();
     }
 
-    if(_boundTileS.valid() && !_boundTileS->getUsedLastFrame())
+    if(_boundTileS.valid() && framenumber != _boundTileS->getFrameNumber())
     {
         ResetEdgeS();
     }
@@ -234,8 +210,6 @@ TileNode::AdjustEdges()
 void
 TileNode::AdjustEdgeW(osg::Vec3d center)
 {
-    _boundTileW_pending->CheckOrphanedBoundaries();
-
     const TileKey& key = getTileModel()->_tileKey;
     unsigned int lod = key.getLOD();
     unsigned int y = key.getTileY();
@@ -331,8 +305,6 @@ TileNode::AdjustEdgeW(osg::Vec3d center)
 void
 TileNode::AdjustEdgeN(osg::Vec3d center)
 {
-    _boundTileN_pending->CheckOrphanedBoundaries();
-
     const TileKey& key = getTileModel()->_tileKey;
     unsigned int lod = key.getLOD();
     unsigned int x = key.getTileX();
@@ -424,8 +396,6 @@ TileNode::AdjustEdgeN(osg::Vec3d center)
 void
 TileNode::AdjustEdgeE(osg::Vec3d center)
 {
-    _boundTileE_pending->CheckOrphanedBoundaries();
-
     const TileKey& key = getTileModel()->_tileKey;
     unsigned int lod = key.getLOD();
     unsigned int y = key.getTileY();
@@ -520,8 +490,6 @@ TileNode::AdjustEdgeE(osg::Vec3d center)
 void
 TileNode::AdjustEdgeS(osg::Vec3d center)
 {
-    _boundTileS_pending->CheckOrphanedBoundaries();
-
     const TileKey& key = getTileModel()->_tileKey;
     unsigned int lod = key.getLOD();
     unsigned int x = key.getTileX();

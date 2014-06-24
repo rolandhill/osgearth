@@ -39,7 +39,7 @@ namespace osgEarth { namespace Drivers { namespace MPTerrainEngine
     class TileGroup : public osg::Group
     {
     public:
-        TileGroup(const TileKey&    key, 
+        TileGroup(const TileKey&    key,
                   const UID&        engineUID,
                   TileNodeRegistry* live,
                   TileNodeRegistry* dead);
@@ -56,14 +56,14 @@ namespace osgEarth { namespace Drivers { namespace MPTerrainEngine
 
         void resetUsedLastFrameFlags();
 
-        void GetDisplayedTilesForTarget(unsigned int x, unsigned int y, unsigned int lod, MPTerrainEngineNode::Side side, std::vector< TileNode* >& tnv);
+        void GetDisplayedTilesForTarget(unsigned int x, unsigned int y, unsigned int lod, MPTerrainEngineNode::Side side, TileNodeVector& tnv, unsigned int framenumber);
 
     protected:
         virtual ~TileGroup() { }
 
         TileNode* getTileNode(unsigned q);
 
-        void CollectTargetTiles(unsigned int subtile,  int x, unsigned int y, unsigned int lod, MPTerrainEngineNode::Side side, std::vector< TileNode* >& tnv);
+        void CollectTargetTiles(unsigned int subtile,  int x, unsigned int y, unsigned int lod, MPTerrainEngineNode::Side side, TileNodeVector& tnv, unsigned int framenumber);
 
         osg::ref_ptr<osg::Node>        _updateAgent;
         mutable Threading::Mutex       _updateMutex;

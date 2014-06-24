@@ -68,7 +68,7 @@ namespace
 
 //------------------------------------------------------------------------
 
-TileGroup::TileGroup(const TileKey&    key, 
+TileGroup::TileGroup(const TileKey&    key,
                      const UID&        engineUID,
                      TileNodeRegistry* live,
                      TileNodeRegistry* dead) :
@@ -187,62 +187,13 @@ TileGroup::traverse(osg::NodeVisitor& nv)
         {
             _updateAgent->accept( nv );
         }
-
-        //If this TileGroup is being traversed, then the sibling TileNode is not, so we reset some values.
-        TilePagedLOD* tpl = static_cast<TilePagedLOD*>( getParent(0) );
-        if(tpl->getNumChildren() > 0)
-        {
-            TileNode* tn = dynamic_cast<TileNode*>( tpl->getChild(0) );
-            if(tn)
-            {
-                tn->resetUsedLastFrameFlag();
-            }
-        }
     }
 
     osg::Group::traverse( nv );
 }
 
 void
-TileGroup::resetUsedLastFrameFlags()
-{
-    if( getNumChildren() < 4 ) return;
-
-	for( unsigned q=0; q<4; ++q )
-	{
-        osg::Node* node = getChild(q);
-		TilePagedLOD* tpl = dynamic_cast<TilePagedLOD*>( node );
-		if(tpl)
-		{
-            TileNode* tn = tpl->getTileNode();
-            if(tn)
-            {
-                if(tn->getUsedLastFrame())
-                {
-                    // If this TileNode was used then just reset it
-                    tn->resetUsedLastFrameFlag();
-                }
-                else
-                {
-                    // ... Otherwise propogate the reset request
-                    if(tpl->getNumChildren() > 1)
-                    {
-                        TileGroup* tg = dynamic_cast<TileGroup*>(tpl->getChild(1));
-                        if(tg)
-                        {
-                            tg->resetUsedLastFrameFlags();
-                        }
-                    }
-                }
-            }
-		}
-	}
-
-}
-
-
-void
-TileGroup::GetDisplayedTilesForTarget(unsigned int x, unsigned int y, unsigned int lod, MPTerrainEngineNode::Side side, std::vector< TileNode* >& tnv)
+TileGroup::GetDisplayedTilesForTarget(unsigned int x, unsigned int y, unsigned int lod, MPTerrainEngineNode::Side side, TileNodeVector& tnv, unsigned int framenumber)
 {
     if( getNumChildren() < 4 ) return;
 
@@ -266,36 +217,36 @@ TileGroup::GetDisplayedTilesForTarget(unsigned int x, unsigned int y, unsigned i
         if(iy) index += 2;
         if(ix) index += 1;
 
-        CollectTargetTiles(index, x, y, lod, side, tnv);
+        CollectTargetTiles(index, x, y, lod, side, tnv, framenumber);
     }
     else
     {
         //We must include all tiles along the requested boundary
         if(side == MPTerrainEngineNode::Side_W)
         {
-            CollectTargetTiles(0, x, y, lod, side, tnv);
-            CollectTargetTiles(2, x, y, lod, side, tnv);
+            CollectTargetTiles(0, x, y, lod, side, tnv, framenumber);
+            CollectTargetTiles(2, x, y, lod, side, tnv, framenumber);
         }
         else if(side == MPTerrainEngineNode::Side_N)
         {
-            CollectTargetTiles(0, x, y, lod, side, tnv);
-            CollectTargetTiles(1, x, y, lod, side, tnv);
+            CollectTargetTiles(0, x, y, lod, side, tnv, framenumber);
+            CollectTargetTiles(1, x, y, lod, side, tnv, framenumber);
         }
         else if(side == MPTerrainEngineNode::Side_E)
         {
-            CollectTargetTiles(1, x, y, lod, side, tnv);
-            CollectTargetTiles(3, x, y, lod, side, tnv);
+            CollectTargetTiles(1, x, y, lod, side, tnv, framenumber);
+            CollectTargetTiles(3, x, y, lod, side, tnv, framenumber);
         }
         else if(side == MPTerrainEngineNode::Side_S)
         {
-            CollectTargetTiles(2, x, y, lod, side, tnv);
-            CollectTargetTiles(3, x, y, lod, side, tnv);
+            CollectTargetTiles(2, x, y, lod, side, tnv, framenumber);
+            CollectTargetTiles(3, x, y, lod, side, tnv, framenumber);
         }
     }
 }
 
 void
-TileGroup::CollectTargetTiles(unsigned int subtile,  int x, unsigned int y, unsigned int lod, MPTerrainEngineNode::Side side, std::vector< TileNode* >& tnv)
+TileGroup::CollectTargetTiles(unsigned int subtile,  int x, unsigned int y, unsigned int lod, MPTerrainEngineNode::Side side, TileNodeVector& tnv, unsigned int framenumber)
 {
     // Get the subtile
     osg::Node* node = getChild(subtile);
@@ -315,7 +266,7 @@ TileGroup::CollectTargetTiles(unsigned int subtile,  int x, unsigned int y, unsi
             TileNode* tpltn = tpl->getTileNode();
             if(tpltn)
             {
-                if(tpltn->getUsedLastFrame())
+                if(framenumber == tpltn->getFrameNumber())
                 {
                     // If it was used, then add to the list
                     tnv.push_back(tpltn);
@@ -328,7 +279,7 @@ TileGroup::CollectTargetTiles(unsigned int subtile,  int x, unsigned int y, unsi
                         TileGroup* tpltg = dynamic_cast<TileGroup*>(tpl->getChild(1));
                         if(tpltg)
                         {
-                            tpltg->GetDisplayedTilesForTarget(x, y, lod, side, tnv);
+                            tpltg->GetDisplayedTilesForTarget(x, y, lod, side, tnv, framenumber);
                         }
                     }
                 }

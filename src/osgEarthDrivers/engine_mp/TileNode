@@ -102,16 +102,7 @@ namespace osgEarth { namespace Drivers { namespace MPTerrainEngine
         */
 		void setTerrainEngineNode(MPTerrainEngineNode* mpt) { _terrainEngineNode = mpt; }
 
-        /**
-        * Reset flag to indicate that tile was not used on the last frame and reset pending boundary tile pointers.
-        */
-		void resetUsedLastFrameFlag();
-
-        /**
-        * Return whether this tile was used in the display on the last frame.
-        */
-		bool getUsedLastFrame() { return _usedLastFrame; }
-
+        unsigned int getFrameNumber() { return _frameNumber; }
 
         /**
         * Set the bounding tiles. These will be 'pending' until AdjustEdges is called
@@ -139,7 +130,7 @@ namespace osgEarth { namespace Drivers { namespace MPTerrainEngine
         /**
         * Check if boundary tiles are still being used in the display and reset any edge adjustments if they are not.
         */
-		void CheckOrphanedBoundaries();
+		void CheckOrphanedBoundaries(unsigned int framenumber);
 
 
         /**
@@ -178,7 +169,8 @@ namespace osgEarth { namespace Drivers { namespace MPTerrainEngine
         bool                               _outOfDate;
         bool                               _dirty;
 
-		bool                               _usedLastFrame;
+        unsigned int                       _frameNumber;
+
         MPTerrainEngineNode*               _terrainEngineNode;
 
         osg::ref_ptr<TileNode>             _boundTileW;
