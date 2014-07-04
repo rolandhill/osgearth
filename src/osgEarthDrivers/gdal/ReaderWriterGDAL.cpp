@@ -639,7 +639,7 @@ public:
 
     virtual ~GDALTileSource()
     {
-        GDAL_DS_SCOPED_LOCK;
+        GDAL_SCOPED_LOCK;
 
         // Close the _warpedDS dataset if :
         // - it exists
@@ -676,7 +676,7 @@ public:
 
     Status initialize( const osgDB::Options* dbOptions )
     {
-        GDAL_DS_SCOPED_LOCK;
+        GDAL_SCOPED_LOCK;
 
         Cache* cache = 0;
 
