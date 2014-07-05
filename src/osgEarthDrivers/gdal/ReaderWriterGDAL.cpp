@@ -195,7 +195,7 @@ getFiles(const std::string &file, const std::vector<std::string> &exts, const st
 static GDALDatasetH
 build_vrt(std::vector<std::string> &files, ResolutionStrategy resolutionStrategy)
 {
-//    GDAL_SCOPED_LOCK;
+    GDAL_SCOPED_LOCK;
 
     char* projectionRef = NULL;
     int nBands = 0;
@@ -1252,7 +1252,8 @@ public:
             return NULL;
         }
 
-        GDAL_DS_SCOPED_LOCK;
+        GDAL_SCOPED_LOCK;
+//        GDAL_DS_SCOPED_LOCK;
 
         int tileSize = _options.tileSize().value();
 
@@ -1747,7 +1748,8 @@ public:
             return NULL;
         }
 
-        GDAL_DS_SCOPED_LOCK;
+        GDAL_SCOPED_LOCK;
+//        GDAL_DS_SCOPED_LOCK;
 
         int tileSize = _options.tileSize().value();
 
@@ -1828,7 +1830,8 @@ public:
             return NULL;
         }
 
-        GDAL_DS_SCOPED_LOCK;
+        GDAL_SCOPED_LOCK;
+//        GDAL_DS_SCOPED_LOCK;
 
         int tileSize = _options.tileSize().value();
 
