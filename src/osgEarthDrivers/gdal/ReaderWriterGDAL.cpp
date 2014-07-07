@@ -1124,7 +1124,7 @@ public:
     */
     static GDALRasterBand* findBandByColorInterp(GDALDataset *ds, GDALColorInterp colorInterp)
     {
-//        GDAL_SCOPED_LOCK;
+        GDAL_SCOPED_LOCK;
 
         for (int i = 1; i <= ds->GetRasterCount(); ++i)
         {
@@ -1135,7 +1135,7 @@ public:
 
     static GDALRasterBand* findBandByDataType(GDALDataset *ds, GDALDataType dataType)
     {
-//        GDAL_SCOPED_LOCK;
+        GDAL_SCOPED_LOCK;
 
         for (int i = 1; i <= ds->GetRasterCount(); ++i)
         {
@@ -1586,7 +1586,7 @@ public:
 
     bool isValidValue(float v, GDALRasterBand* band)
     {
-//        GDAL_SCOPED_LOCK;
+        GDAL_SCOPED_LOCK;
 
         float bandNoData = -32767.0f;
         int success;
