@@ -61,7 +61,8 @@ _outOfDate         ( false )
         int rows = hf->getNumRows();
         int cols = hf->getNumColumns();
 
-        _indices.reserve(rows * cols);
+//        Threading::ScopedWriteLock exclusiveLock( _indicesMutex );
+//        _indices.reserve(rows * cols);
     }
 }
 
@@ -210,6 +211,8 @@ TileNode::AdjustEdges()
 void
 TileNode::AdjustEdgeW(osg::Vec3d center)
 {
+    if( !_boundTileW_pending->isValid() ) return;
+
     const TileKey& key = getTileModel()->_tileKey;
     unsigned int lod = key.getLOD();
     unsigned int y = key.getTileY();
@@ -254,6 +257,7 @@ TileNode::AdjustEdgeW(osg::Vec3d center)
     std::vector< short >& bindices = _boundTileW_pending->getIndices();
 
     // Loop through this tiles boundary heights
+    Threading::ScopedWriteLock exclusiveLock( _indicesMutex );
     for(int j = 0; j < rows; j++)
     {
         int index = _indices[j * cols];
@@ -305,6 +309,8 @@ TileNode::AdjustEdgeW(osg::Vec3d center)
 void
 TileNode::AdjustEdgeN(osg::Vec3d center)
 {
+    if( !_boundTileN_pending->isValid() ) return;
+
     const TileKey& key = getTileModel()->_tileKey;
     unsigned int lod = key.getLOD();
     unsigned int x = key.getTileX();
@@ -346,6 +352,7 @@ TileNode::AdjustEdgeN(osg::Vec3d center)
     std::vector< short >& bindices = _boundTileN_pending->getIndices();
 
     // Loop through this tiles boundary heights
+    Threading::ScopedWriteLock exclusiveLock( _indicesMutex );
     for(int i = 0; i < cols; i++)
     {
         int index = _indices[(rows - 1) * cols + i];
@@ -396,6 +403,8 @@ TileNode::AdjustEdgeN(osg::Vec3d center)
 void
 TileNode::AdjustEdgeE(osg::Vec3d center)
 {
+    if( !_boundTileE_pending->isValid() ) return;
+
     const TileKey& key = getTileModel()->_tileKey;
     unsigned int lod = key.getLOD();
     unsigned int y = key.getTileY();
@@ -440,6 +449,7 @@ TileNode::AdjustEdgeE(osg::Vec3d center)
     std::vector< short >& bindices = _boundTileE_pending->getIndices();
 
     // Loop through this tiles boundary heights
+    Threading::ScopedWriteLock exclusiveLock( _indicesMutex );
     for(int j = 0; j < rows; j++)
     {
         int index = _indices[j * cols + (cols - 1)];
@@ -490,6 +500,8 @@ TileNode::AdjustEdgeE(osg::Vec3d center)
 void
 TileNode::AdjustEdgeS(osg::Vec3d center)
 {
+    if( !_boundTileS_pending->isValid() ) return;
+
     const TileKey& key = getTileModel()->_tileKey;
     unsigned int lod = key.getLOD();
     unsigned int x = key.getTileX();
@@ -530,6 +542,7 @@ TileNode::AdjustEdgeS(osg::Vec3d center)
     std::vector< short >& bindices = _boundTileS_pending->getIndices();
 
     // Loop through this tiles boundary heights
+    Threading::ScopedWriteLock exclusiveLock( _indicesMutex );
     for(int i = 0; i < cols; i++)
     {
         int index = _indices[i];
@@ -588,6 +601,7 @@ TileNode::ResetEdgeW()
     int rows = hf->getNumRows();
     int cols = hf->getNumColumns();
 
+    Threading::ScopedWriteLock exclusiveLock( _indicesMutex );
     for(int j = 0; j < rows; j++)
     {
         int index = _indices[j * cols];
@@ -620,6 +634,7 @@ TileNode::ResetEdgeN()
     int rows = hf->getNumRows();
     int cols = hf->getNumColumns();
 
+    Threading::ScopedWriteLock exclusiveLock( _indicesMutex );
     for(int i = 0; i < cols; i++)
     {
         int index = _indices[(rows - 1) * cols + i];
@@ -652,6 +667,7 @@ TileNode::ResetEdgeE()
     int rows = hf->getNumRows();
     int cols = hf->getNumColumns();
 
+    Threading::ScopedWriteLock exclusiveLock( _indicesMutex );
     for(int j = 0; j < rows; j++)
     {
         int index = _indices[j * cols + (cols - 1)];
@@ -684,6 +700,7 @@ TileNode::ResetEdgeS()
     int rows = hf->getNumRows();
     int cols = hf->getNumColumns();
 
+    Threading::ScopedWriteLock exclusiveLock( _indicesMutex );
     for(int i = 0; i < cols; i++)
     {
         int index = _indices[i];
@@ -705,3 +722,16 @@ TileNode::ResetEdgeS()
     _boundTileS = 0L;
 }
 
+void
+TileNode::StoreIndices(std::vector<int>& indices)
+{
+    Threading::ScopedWriteLock exclusiveLock( _indicesMutex );
+    _indices.clear();
+    _indices.reserve(indices.size());
+
+    std::vector<int>::iterator iit;
+    for(iit = indices.begin(); iit != indices.end(); iit++)
+    {
+        _indices.push_back((short) *iit);
+    }
+}
