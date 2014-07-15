@@ -138,6 +138,11 @@ namespace osgEarth { namespace Drivers { namespace MPTerrainEngine
         */
 		std::vector< short >& getIndices() { return _indices; }
 
+        /**
+        * Store the supplied array of indices
+        */
+		void StoreIndices(std::vector<int>& indices);
+
     public: // OVERRIDES
 
         virtual void traverse( class osg::NodeVisitor& nv );
@@ -184,6 +189,7 @@ namespace osgEarth { namespace Drivers { namespace MPTerrainEngine
         osg::ref_ptr<TileNode>             _boundTileS_pending;
 
         std::vector< short >               _indices;
+        Threading::ReadWriteMutex          _indicesMutex;
     };
 
 
