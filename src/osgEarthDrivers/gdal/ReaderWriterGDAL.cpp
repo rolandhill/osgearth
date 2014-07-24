@@ -89,10 +89,7 @@ using namespace osgEarth::Drivers;
 #define GEOTRSFRM_ROTATION_PARAM2      4
 #define GEOTRSFRM_NS_RES               5
 
-#define GDAL_DS_SCOPED_LOCK \
-    OpenThreads::ScopedLock<OpenThreads::ReentrantMutex> _slock( gdal_ds_mutex )\
-
-OpenThreads::ReentrantMutex gdal_ds_mutex;
+#define GDAL_DS_SCOPED_LOCK OpenThreads::ScopedLock<OpenThreads::ReentrantMutex> _slock( gdal_ds_mutex )
 
 typedef enum
 {
@@ -628,6 +625,8 @@ GDALDatasetH GDALAutoCreateWarpedVRTforPolarStereographic(
 class GDALTileSource : public TileSource
 {
 public:
+    OpenThreads::ReentrantMutex gdal_ds_mutex;
+
     GDALTileSource( const TileSourceOptions& options ) :
       TileSource( options ),
       _srcDS(NULL),
@@ -1129,7 +1128,7 @@ public:
     */
     static GDALRasterBand* findBandByColorInterp(GDALDataset *ds, GDALColorInterp colorInterp)
     {
-        GDAL_SCOPED_LOCK;
+//        GDAL_SCOPED_LOCK;
 
         for (int i = 1; i <= ds->GetRasterCount(); ++i)
         {
@@ -1140,7 +1139,7 @@ public:
 
     static GDALRasterBand* findBandByDataType(GDALDataset *ds, GDALDataType dataType)
     {
-        GDAL_SCOPED_LOCK;
+//        GDAL_SCOPED_LOCK;
 
         for (int i = 1; i <= ds->GetRasterCount(); ++i)
         {
@@ -1257,8 +1256,8 @@ public:
             return NULL;
         }
 
-        GDAL_SCOPED_LOCK;
-//        GDAL_DS_SCOPED_LOCK;
+//        GDAL_SCOPED_LOCK;
+        GDAL_DS_SCOPED_LOCK;
 
         int tileSize = _options.tileSize().value();
 
@@ -1591,7 +1590,8 @@ public:
 
     bool isValidValue(float v, GDALRasterBand* band)
     {
-        GDAL_SCOPED_LOCK;
+//        GDAL_SCOPED_LOCK;
+//        GDAL_DS_SCOPED_LOCK;
 
         float bandNoData = -32767.0f;
         int success;
@@ -1753,8 +1753,8 @@ public:
             return NULL;
         }
 
-        GDAL_SCOPED_LOCK;
-//        GDAL_DS_SCOPED_LOCK;
+//        GDAL_SCOPED_LOCK;
+        GDAL_DS_SCOPED_LOCK;
 
         int tileSize = _options.tileSize().value();
 
@@ -1835,8 +1835,8 @@ public:
             return NULL;
         }
 
-        GDAL_SCOPED_LOCK;
-//        GDAL_DS_SCOPED_LOCK;
+//        GDAL_SCOPED_LOCK;
+        GDAL_DS_SCOPED_LOCK;
 
         int tileSize = _options.tileSize().value();
 
