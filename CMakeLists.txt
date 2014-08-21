@@ -127,8 +127,10 @@ SET(V8_DIR "" CACHE PATH "set to base V8 install path")
 FIND_PACKAGE(V8)
 FIND_PACKAGE(JavaScriptCore)
 
-SET(DUKTAPE_DIR "" CACHE PATH "set to base DUKTAPE install path")
-FIND_PACKAGE(Duktape)
+SET (WITH_EXTERNAL_DUKTAPE FALSE CACHE BOOL "Use bundled or system wide version of Duktape")
+IF (WITH_EXTERNAL_DUKTAPE)
+    FIND_PACKAGE(Duktape)
+ENDIF (WITH_EXTERNAL_DUKTAPE)
 
 FIND_PACKAGE(Qt5Core QUIET)
 FIND_PACKAGE(Qt5Widgets QUIET)

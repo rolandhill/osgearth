@@ -669,9 +669,12 @@ Control::handle( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& aa, 
         {            
             if ( ea.getEventType() == osgGA::GUIEventAdapter::RELEASE )
             {
+              float canvasY = cx._vp->height() - (ea.getY() - cx._view->getCamera()->getViewport()->y());
+              float canvasX = ea.getX() - cx._view->getCamera()->getViewport()->x();
+
                 for( ControlEventHandlerList::const_iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i )
                 {
-                    osg::Vec2f relXY( ea.getX() - _renderPos.x(), cx._vp->height() - ea.getY() - _renderPos.y() );
+                    osg::Vec2f relXY( canvasX - _renderPos.x(), canvasY - _renderPos.y() );
                     i->get()->onClick( this, relXY, ea.getButtonMask() );
                     aa.requestRedraw();
                 }
@@ -1286,7 +1289,8 @@ HSliderControl::handle( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapte
 
     if ( ea.getEventType() == osgGA::GUIEventAdapter::DRAG )
     {
-        float relX = ea.getX() - _renderPos.x();
+        float canvasX = ea.getX() - cx._view->getCamera()->getViewport()->x();
+        float relX = canvasX - _renderPos.x();
 
         if ( _min < _max )
             setValue( osg::clampBetween(_min + (_max-_min) * ( relX/_renderSize.x() ), _min, _max) );
@@ -1611,6 +1615,10 @@ Container::handle( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& aa
         return false;
 
     bool handled = false;
+
+    float canvasY = cx._vp->height() - (ea.getY() - cx._view->getCamera()->getViewport()->y());
+    float canvasX = ea.getX() - cx._view->getCamera()->getViewport()->x();
+
     std::vector<Control*> children;
     getChildren( children );
     //OE_NOTICE << "handling " << children.size() << std::endl;
@@ -1620,7 +1628,7 @@ Container::handle( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& aa
         //Control* child = dynamic_cast<Control*>( getChild(i) );
         if ( child )
         {
-            if (ea.getEventType() == osgGA::GUIEventAdapter::FRAME || child->intersects( ea.getX(), cx._vp->height() - ea.getY() ) )
+            if (ea.getEventType() == osgGA::GUIEventAdapter::FRAME || child->intersects( canvasX, canvasY ) )
                 handled = child->handle( ea, aa, cx );
             if ( handled )
                 break;
@@ -2588,7 +2596,25 @@ ControlCanvas::getOrCreate(osg::View* view)
         return canvas;
 
     canvas = new ControlCanvas();
-    view->getCamera()->addChild( canvas );
+
+    // ControlCanvas does NOT work as a direct child of the View's camera.
+    osg::Group* group = 0L;
+    if ( view->getCamera()->getNumChildren() > 0 )
+    {
+        group = view->getCamera()->getChild(0)->asGroup();
+        if ( !group )
+        {
+            group = new osg::Group();
+            osgEarth::insertGroup(group, view->getCamera());
+        }
+    }
+    else
+    {
+        group = new osg::Group();
+        view->getCamera()->addChild(group);
+    }
+
+    group->addChild( canvas );
     return canvas;
 }
 
@@ -2725,13 +2751,13 @@ ControlCanvas::handle(const osgGA::GUIEventAdapter& ea,
     }
 
 
-    float invY = _context._vp->height() - ea.getY();
+    float canvasY = _context._vp->height() - (ea.getY() - _context._view->getCamera()->getViewport()->y());
+    float canvasX = ea.getX() - _context._view->getCamera()->getViewport()->x();
 
     for( unsigned i=getNumChildren()-1; i>0; --i )
     {
         Control* control = static_cast<Control*>( getChild(i) );
-
-        if ( control->intersects( ea.getX(), invY ) )
+        if ( control->intersects( canvasX, canvasY ) )
         {
             handled = control->handle( ea, aa, _context );
             if ( handled )
@@ -2747,7 +2773,7 @@ ControlCanvas::handle(const osgGA::GUIEventAdapter& ea,
 
     if ( _context._active.size() > 0 )
     {
-        bool hit = _context._active.front()->intersects( ea.getX(), invY );
+        bool hit = _context._active.front()->intersects( canvasX, canvasY );
         _context._active.front()->setActive( hit );
         if ( !hit )
             _context._active.pop();
@@ -2791,9 +2817,7 @@ ControlCanvas::update(const osg::FrameStamp* frameStamp)
     // shaderize.
     // we don't really need to rebuild shaders on every dirty; we could probably
     // just do it on add/remove controls; but that's an optimization for later
-    ShaderGenerator shaderGen;
-    shaderGen.setProgramName( "osgEarth.ControlCanvas" );
-    shaderGen.run( this );
+    Registry::shaderGenerator().run( this, "osgEarth.ControlCanvas" );
 #endif
 
     _contextDirty = false;

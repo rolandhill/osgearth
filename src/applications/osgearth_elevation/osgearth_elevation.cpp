@@ -64,13 +64,14 @@ struct QueryElevationHandler : public osgGA::GUIEventHandler
 
         // look under the mouse:
         osg::Vec3d world;
-        if ( _terrain->getWorldCoordsUnderMouse(view, x, y, world) )
+        osgUtil::LineSegmentIntersector::Intersections hits;
+        if ( view->computeIntersections(x, y, hits) )
         {
+            world = hits.begin()->getWorldIntersectPoint();
+
             // convert to map coords:
             GeoPoint mapPoint;
             mapPoint.fromWorld( _terrain->getSRS(), world );
-
-            double isectZ = mapPoint.alt();
 
             // do an elevation query:
             double query_resolution = 0; // 1/10th of a degree
@@ -100,10 +101,14 @@ struct QueryElevationHandler : public osgGA::GUIEventHandler
                 s_mslLabel->setText( Stringify() << out_hamsl );
                 s_haeLabel->setText( Stringify() << mapPointGeodetic.z() );
                 s_resLabel->setText( Stringify() << out_resolution );
-                s_mapLabel->setText( Stringify() << isectZ );
 
                 yes = true;
             }
+
+            // finally, get a normal ISECT HAE point.
+            GeoPoint isectPoint;
+            isectPoint.fromWorld( _terrain->getSRS()->getGeodeticSRS(), world );
+            s_mapLabel->setText( Stringify() << isectPoint.alt() );
         }
 
         if (!yes)
@@ -112,13 +117,13 @@ struct QueryElevationHandler : public osgGA::GUIEventHandler
             s_mslLabel->setText( "-" );
             s_haeLabel->setText( "-" );
             s_resLabel->setText( "-" );
-            s_mapLabel->setText( "-" );
         }
     }
 
     bool handle( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& aa )
     {
-        if ( ea.getEventType() == osgGA::GUIEventAdapter::MOVE )
+        if (ea.getEventType() == osgGA::GUIEventAdapter::MOVE &&
+            aa.asView()->getFrameStamp()->getFrameNumber() % 10 == 0)
         {
             osgViewer::View* view = static_cast<osgViewer::View*>(aa.asView());
             update( ea.getX(), ea.getY(), view );
@@ -149,6 +154,10 @@ int main(int argc, char** argv)
     }
 
     osg::Group* root = new osg::Group();
+    viewer.setSceneData( root );
+    
+    // install the programmable manipulator.
+    viewer.setCameraManipulator( new osgEarth::Util::EarthManipulator() );
 
     // The MapNode will render the Map object in the scene graph.
     root->addChild( s_mapNode );
@@ -159,7 +168,7 @@ int main(int argc, char** argv)
     grid->setControl(0,1,new LabelControl("Vertical Datum:"));
     grid->setControl(0,2,new LabelControl("Height (MSL):"));
     grid->setControl(0,3,new LabelControl("Height (HAE):"));
-    grid->setControl(0,4,new LabelControl("Height (TRN):"));
+    grid->setControl(0,4,new LabelControl("Isect  (HAE):"));
     grid->setControl(0,5,new LabelControl("Resolution:"));
 
     s_posLabel = grid->setControl(1,0,new LabelControl(""));
@@ -174,11 +183,9 @@ int main(int argc, char** argv)
         mapSRS->getVerticalDatum()->getName() : 
         Stringify() << "geodetic (" << mapSRS->getEllipsoid()->getName() << ")" );
 
-    ControlCanvas* canvas = new ControlCanvas();
-    viewer.getCamera()->addChild( canvas );
+    ControlCanvas* canvas = new ControlCanvas();    
+    root->addChild(canvas);
     canvas->addControl( grid );
-
-    viewer.setSceneData( root );
 
     // An event handler that will respond to mouse clicks:
     viewer.addEventHandler( new QueryElevationHandler() );
@@ -187,10 +194,6 @@ int main(int argc, char** argv)
     viewer.addEventHandler(new osgViewer::StatsHandler());
     viewer.addEventHandler(new osgViewer::WindowSizeHandler());
     viewer.addEventHandler(new osgGA::StateSetManipulator(viewer.getCamera()->getOrCreateStateSet()));
-
-    // install the programmable manipulator.
-    if ( s_mapNode->getMap()->isGeocentric() )
-        viewer.setCameraManipulator( new osgEarth::Util::EarthManipulator() );
 
     return viewer.run();
 }

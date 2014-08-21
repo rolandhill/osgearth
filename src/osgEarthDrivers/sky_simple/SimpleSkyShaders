@@ -393,7 +393,7 @@ namespace osgEarth { namespace Drivers { namespace SimpleSky
         // normal-based shading (since the atmospheric scattering will
         // take over at that point). This provides a nice dawn or dusk
         // "shining" effect on the sides of buildings or terrain.
-        // Adjust the "low". Higher value will increase the effect of
+        // Adjust the "low": Higher value will increase the effect of
         // normal-based shading at shallower sun angles (i.e. it will
         // become more prominent. Perhaps it makes sense in the future to
         // make this a "scattering effect" uniform or something -gw)
@@ -425,7 +425,7 @@ namespace osgEarth { namespace Drivers { namespace SimpleSky
         "    float exposure = atmos_exposure*clamp(1.0-atmos_space, 0.5, 1.0); \n"
 
         "    vec3 atmosColor = 1.0 - exp(-exposure * (atmos_color + sceneColor.rgb * attenuation)); \n"
-        "    color.rgb = atmosColor; \n"
+        "    color.rgb = gl_FrontMaterial.emission.rgb + atmosColor; \n"
         "} \n";
 
     //-- BASIC PHONG GROUND LIGHTING ------------------------------------------

@@ -372,8 +372,12 @@ ExtrudeGeometryFilter::buildStructure(const Geometry*         input,
             Corners::iterator this_corner = c;
 
             Corners::iterator next_corner = c;
-            if ( ++next_corner == corners.end() )
-                next_corner = corners.begin();
+			bool isLastEdge = false;
+			if ( ++next_corner == corners.end() )
+			{
+				isLastEdge = true;
+				next_corner = corners.begin();
+			}
 
             osg::Vec3d base_vec = next_corner->base - this_corner->base;
             double span = base_vec.length();
@@ -389,7 +393,19 @@ ExtrudeGeometryFilter::buildStructure(const Geometry*         input,
                 while(nextTexBoundary < cornerOffset+span)
                 {
                     // insert a new fake corner.
-                    Corners::iterator new_corner = corners.insert(next_corner, Corner());
+					Corners::iterator new_corner;
+
+                    if ( isLastEdge )
+                    {
+						corners.push_back(Corner());
+						new_corner = c;
+						new_corner++;
+                    }
+                    else
+                    {
+						new_corner = corners.insert(next_corner, Corner());
+					}
+
                     new_corner->isFromSource = false;
                     double advance = nextTexBoundary-cornerOffset;
                     new_corner->base = this_corner->base + base_vec*advance;
@@ -802,6 +818,14 @@ ExtrudeGeometryFilter::process( FeatureList& features, FilterContext& context )
     {
         Feature* input = f->get();
 
+        // run a symbol script if present.
+        if ( _extrusionSymbol->script().isSet() )
+        {
+            StringExpression temp( _extrusionSymbol->script().get() );
+            input->eval( temp, &context );
+        }
+
+        // iterator over the parts.
         GeometryIterator iter( input->getGeometry(), false );
         while( iter.hasMore() )
         {

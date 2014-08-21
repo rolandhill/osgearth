@@ -82,6 +82,8 @@ namespace osgEarth
         {
             std::string                  _name;
             osg::ref_ptr<AcceptCallback> _accept;
+            optional<float>              _minRange;
+            optional<float>              _maxRange;
             
             bool accept(const osg::State& state) const {
                 return (!_accept.valid()) || (_accept->operator()(state) == true);
@@ -172,6 +174,16 @@ namespace osgEarth
             float                        order =1.0f );
 
         /**
+         * Sets the minimum active range for a named function. The function must already
+         * exist in the VirtualProgram. For this to work, there must to a uniform in the
+         * scene graph that conveys the current range; use the VirtualProgramRangeCallback
+         * to activate this.
+         */
+        void setFunctionMinRange(const std::string& name, float minRange);
+
+        void setFunctionMaxRange(const std::string& name, float maxRange);
+
+        /**
          * Whether this VP should inherit shaders from parent state sets. This is
          * the normal operation. You can set this to "false" to "reset" the VP.
          */
@@ -258,13 +270,12 @@ namespace osgEarth
     public:
         struct ShaderEntry
         {
-            ShaderEntry() : _overrideValue(0) { }
-            bool accept(const osg::State& state) const {
-                return (!_accept.valid()) || (_accept->operator()(state) == true);
-            }
+            ShaderEntry();
+            bool accept(const osg::State& state) const;
             osg::ref_ptr<osg::Shader>                _shader;
             osg::StateAttribute::OverrideValue       _overrideValue;
             osg::ref_ptr<ShaderComp::AcceptCallback> _accept;
+            bool operator < (const ShaderEntry& rhs) const;
         };
 
         typedef std::map< std::string, ShaderEntry > ShaderMap;

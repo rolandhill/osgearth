@@ -212,6 +212,12 @@ An *image layer* is a raster image overlaid on the map's geometry.
 | max_resolution        | Maximum source data resolution at which to draw tiles. Value is    |
 |                       | units per pixel, in the native units of the source data.           |
 +-----------------------+--------------------------------------------------------------------+
+| max_data_level        | Maximum level of detail at which new source data is available to   |
+|                       | this image layer. Usually the driver will report this information. |
+|                       | But you may wish to limit it yourself. This is especially true for |
+|                       | some drivers that have no resolution limit, like a rasterization   |
+|                       | driver (agglite) for example.                                      |
++-----------------------+--------------------------------------------------------------------+
 | enabled               | Whether to include this layer in the map. You can only set this at |
 |                       | load time; it is just an easy way of "commenting out" a layer in   |
 |                       | the earth file.                                                    |
@@ -251,7 +257,8 @@ will composite all elevation data into a single heightmap and use that to build 
                    min_resolution = "100.0"
                    max_resolution = "0.0"
                    enabled        = "true"
-                   offset         = "false" >
+                   offset         = "false"
+                   nodata_policy  = "interpolate" >
 
 
 +-----------------------+--------------------------------------------------------------------+
@@ -280,6 +287,10 @@ will composite all elevation data into a single heightmap and use that to build 
 | offset                | Indicates that the height values in this layer are relative        |
 |                       | offsets rather than true terrain height samples.                   |
 +-----------------------+--------------------------------------------------------------------+
+| nodata_policy         | What to do with "no data" values. Default is "interpolate" which   |
+|                       | will interpolate neighboring values to fill holes. Set it to "msl" |
+|                       | to replace "no data" samples with the current sea level value.     |
++-----------------------+--------------------------------------------------------------------+
 
 
 .. _ModelLayer:
@@ -291,8 +302,10 @@ A *Model Layer* renders non-terrain data, like vector features or external 3D mo
 .. parsed-literal::
 
     <map>
-        <model name   = "my model layer"
-               driver = "feature_geom"
+        <model name    = "my model layer"
+               driver  = "feature_geom"
+               enabled = true
+               visible = true >
 
 
 +-----------------------+--------------------------------------------------------------------+
@@ -310,6 +323,34 @@ A *Model Layer* renders non-terrain data, like vector features or external 3D mo
 +-----------------------+--------------------------------------------------------------------+
 | visible               | Whether to draw the layer.                                         |
 +-----------------------+--------------------------------------------------------------------+
+
+The Model Layer also allows you to define a cut-out mask. The terrain engine will cut a hole
+in the terrain surface matching a *boundary geometry* that you supply. You can use the tool
+*osgearth_boundarygen* to create such a geometry.
+
+This is useful if you have an external terrain model and you want to insert it into the 
+osgEarth terrain. The model MUST be in the same coordinate system as the terrain.
+
+.. parsed-literal::
+
+    <map>
+        <model ...>
+            <mask driver="feature">
+                <features driver="ogr">
+                    ...
+
+The Mask can take any polygon feature as input. You can specify masking geometry inline
+by using an inline geometry:
+
+.. parsed-literal::
+    
+    <features ...>
+        <geometry>POLYGON((120 42 0, 121 41 0, 121 40 0))</geometry>
+
+Or you use a shapefile or other feature source, in which case osgEarth will use the 
+*first* feature in the source.
+
+Refer to the *mask.earth* sample for an example.
 
 
 

@@ -65,11 +65,13 @@ namespace osgEarth
                 bool                    optimize );
 
             void apply(osg::Geode&);
+            void apply(osg::LOD&);
 
         protected:
             unsigned _numInstances;
             bool     _optimize;
             osg::ref_ptr<osg::Drawable::ComputeBoundingBoxCallback> _staticBBoxCallback;
+            std::list<osg::PrimitiveSet*> _primitiveSets;
         };
 
 

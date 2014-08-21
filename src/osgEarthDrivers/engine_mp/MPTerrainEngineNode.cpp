@@ -220,7 +220,7 @@ MPTerrainEngineNode::postInitialize( const Map* map, const TerrainOptions& optio
     // Initialize the map frames. We need one for the update thread and one for the
     // cull thread. Someday we can detect whether these are actually the same thread
     // (depends on the viewer's threading mode).
-    _update_mapf = new MapFrame( map, Map::MASKED_TERRAIN_LAYERS, "mp-update" );
+    _update_mapf = new MapFrame( map, Map::ENTIRE_MODEL, "mp-update" );
 
     // merge in the custom options:
     _terrainOptions.merge( options );
@@ -288,11 +288,11 @@ MPTerrainEngineNode::postInitialize( const Map* map, const TerrainOptions& optio
 osg::BoundingSphere
 MPTerrainEngineNode::computeBound() const
 {
-    if ( _terrain && _terrain->getNumChildren() > 0 )
-    {
-        return _terrain->getBound();
-    }
-    else
+    //if ( _terrain && _terrain->getNumChildren() > 0 )
+    //{
+    //    return _terrain->getBound();
+    //}
+    //else
     {
         return TerrainEngineNode::computeBound();
     }
@@ -520,6 +520,7 @@ MPTerrainEngineNode::getKeyNodeFactory()
         // A compiler specific to this thread:
         TileModelCompiler* compiler = new TileModelCompiler(
             _update_mapf->terrainMaskLayers(),
+            _update_mapf->modelLayers(),
             _primaryUnit,
             optimizeTriangleOrientation,
             _terrainOptions );

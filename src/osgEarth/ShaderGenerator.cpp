@@ -18,11 +18,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
 
+#include <osgEarth/ShaderGenerator>
 #include <osgEarth/Capabilities>
 #include <osgEarth/ImageUtils>
 #include <osgEarth/Registry>
 #include <osgEarth/ShaderFactory>
-#include <osgEarth/ShaderGenerator>
 #include <osgEarth/StringUtils>
 
 #include <osg/Drawable>
@@ -118,11 +118,12 @@ struct OSGEarthShaderGenPseudoLoader : public osgDB::ReaderWriter
         OE_INFO << LC << "Loading " << stripped << " and generating shaders." << std::endl;
         
         osg::ref_ptr<osg::Node> node = osgDB::readNodeFile(stripped, options);
-        if ( node )
+        if ( node.valid() )
         {
-            ShaderGenerator gen;
-            gen.setProgramName(osgDB::getSimpleFileName(stripped));
-            gen.run(node, Registry::stateSetCache());
+            osgEarth::Registry::shaderGenerator().run(
+                node.get(),
+                osgDB::getSimpleFileName(stripped),
+                Registry::stateSetCache() );
         }
 
         return node.valid() ? ReadResult(node.release()) : ReadResult::ERROR_IN_READING_FILE;
@@ -265,6 +266,21 @@ namespace
 #endif
         }
     };
+
+    // if the node has a stateset, clone it and replace it with the clone.
+    // otherwise, just create a new stateset on the node.
+    osg::StateSet* cloneOrCreateStateSet(osg::Node* node)
+    {
+        if ( node->getStateSet() )
+        {
+            node->setStateSet( osg::clone(node->getStateSet(), osg::CopyOp::SHALLOW_COPY) );
+            return node->getStateSet();
+        }
+        else
+        {
+            return node->getOrCreateStateSet();
+        }
+    }
 }
 
 //------------------------------------------------------------------------
@@ -274,17 +290,30 @@ ShaderGenerator::ShaderGenerator()
     // find everything regardless of node masking
     setTraversalMode( TRAVERSE_ALL_CHILDREN );
     setNodeMaskOverride( ~0 );
-
-    // set a default program name:
-    setProgramName( "osgEarth.ShaderGenerator" );
-
-    // make sure we support shaders:
-    _active = Registry::capabilities().supportsGLSL();
-    if ( _active )
-    {
-        _state = new StateEx();
-    }
+    _state = new StateEx();
+    _active = true;
 }
+
+// pre-3.3.0, NodeVisitor didn't have a copy constructor.
+#if OSG_VERSION_LESS_THAN(3,3,0)
+ShaderGenerator::ShaderGenerator(const ShaderGenerator& rhs, const osg::CopyOp& copy) :
+osg::NodeVisitor(),
+_active(rhs._active)
+{
+    _visitorType      = rhs._visitorType;
+    _traversalMode    = rhs._traversalMode;
+    _traversalMask    = rhs._traversalMask;
+    _nodeMaskOverride = rhs._nodeMaskOverride;
+    _state = new StateEx();
+}
+#else
+ShaderGenerator::ShaderGenerator(const ShaderGenerator& rhs, const osg::CopyOp& copy) :
+osg::NodeVisitor(rhs, copy),
+_active         (rhs._active)
+{
+    _state = new StateEx();
+}
+#endif
 
 void
 ShaderGenerator::setIgnoreHint(osg::Object* object, bool ignore)
@@ -300,12 +329,6 @@ ShaderGenerator::ignore(const osg::Object* object)
 {
     bool value;
     return object && object->getUserValue(SHADERGEN_HINT_IGNORE, value) && value;
-}
-
-void
-ShaderGenerator::setProgramName(const std::string& name)
-{
-    _name = name;
 }
 
 void
@@ -332,7 +355,9 @@ ShaderGenerator::accept(const osg::StateAttribute* sa) const
 }
 
 void
-ShaderGenerator::run(osg::Node* graph, StateSetCache* cache)
+ShaderGenerator::run(osg::Node*         graph,
+                     const std::string& vpName, 
+                     StateSetCache*     cache)
 {
     if ( graph )
     {
@@ -340,10 +365,9 @@ ShaderGenerator::run(osg::Node* graph, StateSetCache* cache)
         graph->accept( *this );
 
         // perform GL state sharing
-        if ( cache )
-            cache->optimize( graph );
+        optimizeStateSharing( graph, cache );
 
-        osg::StateSet* stateset = graph->getOrCreateStateSet();
+        osg::StateSet* stateset = cloneOrCreateStateSet(graph);
 
         // install a blank VP at the top as the default.
         VirtualProgram* vp = VirtualProgram::get(stateset);
@@ -351,9 +375,16 @@ ShaderGenerator::run(osg::Node* graph, StateSetCache* cache)
         {
             vp = VirtualProgram::getOrCreate(stateset);
             vp->setInheritShaders( true );
-            vp->setName( _name );
+            vp->setName( vpName );
         }
     }
+}
+
+void
+ShaderGenerator::optimizeStateSharing(osg::Node* node, StateSetCache* cache)
+{
+    if ( node && cache )
+        cache->optimize(node);
 }
 
 void 
@@ -571,7 +602,8 @@ ShaderGenerator::apply(osg::ClipNode& node)
     if ( ignore(&node) )
         return;
 
-    VirtualProgram* vp = VirtualProgram::getOrCreate(node.getOrCreateStateSet());
+    osg::StateSet* stateSet = cloneOrCreateStateSet(&node);
+    VirtualProgram* vp = VirtualProgram::getOrCreate(stateSet);
     if ( vp->referenceCount() == 1 ) vp->setName( _name );
     vp->setFunction( "oe_sg_set_clipvertex", s_clip_source, ShaderComp::LOCATION_VERTEX_VIEW );
 
@@ -595,7 +627,7 @@ ShaderGenerator::processText(const osg::StateSet* ss, osg::ref_ptr<osg::StateSet
     if ( dynamic_cast<osg::Program*>(program) != 0L )
         return false;
 
-    // new state set:
+    // New state set. We never modify existing statesets.
     replacement = ss ? osg::clone(ss, osg::CopyOp::SHALLOW_COPY) : new osg::StateSet();
 
     // new VP:
@@ -649,8 +681,8 @@ ShaderGenerator::processGeometry(const osg::StateSet*         original,
     if ( dynamic_cast<osg::Program*>(program) != 0L )
         return false;
 
-    // copy or create a new stateset (that we may or may not use depending on
-    // what we find)
+    // Copy or create a new stateset (that we may or may not use depending on
+    // what we find). Never modify an existing stateset!
     osg::ref_ptr<osg::StateSet> new_stateset = 
         original ? osg::clone(original, osg::CopyOp::SHALLOW_COPY) :
         new osg::StateSet();

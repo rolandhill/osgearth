@@ -108,7 +108,7 @@ namespace
         p->setCenter( bs.center() );
         p->setRadius( bs.radius() );
         p->setFileName( 0, uri );
-        p->setRange( 0, minRange, maxRange );
+        p->setRange( 0, minRange, maxRange + bs.radius() );
         p->setPriorityOffset( 0, priOffset );
         p->setPriorityScale( 0, priScale );
 #endif
@@ -255,9 +255,12 @@ _overlayChange      ( OVERLAY_NO_CHANGE )
     _defaultFileLocationCallback = new HighLatencyFileLocationCallback();
 
     // set up the callback queues for pre- and post-merge operations.
+
+    // per-merge ops run in the pager thread:
     if ( !_preMergeOperations.valid())
         _preMergeOperations = new RefNodeOperationVector();
 
+    // post-merge ops run in the update traversal:
     if ( !_postMergeOperations.valid() )
         _postMergeOperations = new RefNodeOperationVector();
 
@@ -271,8 +274,12 @@ _overlayChange      ( OVERLAY_NO_CHANGE )
         return;
     }
 
-    // set up a shared resource cache for the session. The ResourceCache will make sure
-    // that resources (skin textures, instance models, etc.) only get loaded once.
+    // Set up a shared resource cache for the session. A session-wide cache means
+    // that all the paging threads that load data from this FMG will load resources
+    // from a single cache; e.g., once a texture is loaded in one thread, the same
+    // StateSet will be used across the entire Session. That also means that StateSets
+    // in the ResourceCache can potentially also be in the live graph; so you should
+    // take care in dealing with them in a multi-threaded environment.
     if ( !session->getResourceCache() && _options.sessionWideResourceCache() == true )
     {
         session->setResourceCache( new ResourceCache(session->getDBOptions()) );
@@ -322,7 +329,9 @@ _overlayChange      ( OVERLAY_NO_CHANGE )
 
             OE_INFO << LC << session->getFeatureSource()->getName() 
                 << ": F.Level max=" << level->maxRange() << ", min=" << level->minRange()
-                << ", LOD=" << lod << std::endl;
+                << ", LOD=" << lod
+                << ", Tile size=" << (level->maxRange() / options.layout()->tileSizeFactor().get())
+                << std::endl;
         }
     }
 
@@ -599,7 +608,7 @@ FeatureModelGraph::load( unsigned lod, unsigned tileX, unsigned tileY, const std
                 lod > 0 ?
                 s_getTileExtent( lod, tileX, tileY, _usableFeatureExtent ) :
                 _usableFeatureExtent;
-
+                
             geometry = buildLevel( *level, tileExtent, 0 );
             result = geometry;
         }
@@ -689,6 +698,7 @@ FeatureModelGraph::buildSubTilePagedLODs(unsigned        parentLOD,
                     << std::fixed
                     << "; center = " << subtile_bs.center().x() << "," << subtile_bs.center().y() << "," << subtile_bs.center().z()
                     << "; radius = " << subtile_bs.radius()
+                    << "; maxrange = " << maxRange
                     << std::endl;
 
                 osg::Group* pagedNode = createPagedNode( 
@@ -1191,6 +1201,8 @@ FeatureModelGraph::checkForGlobalStyles( const Style& style )
             }
         }
     }
+    
+    const RenderSymbol* render = style.get<RenderSymbol>();
 
     if ( _clampable )
     {
@@ -1206,7 +1218,6 @@ FeatureModelGraph::checkForGlobalStyles( const Style& style )
         // check for explicit depth offset render settings (note, this could
         // override the automatic disable put in place by the presence of an
         // ExtrusionSymbol above)
-        const RenderSymbol* render = style.get<RenderSymbol>();
         if ( render && render->depthOffset().isSet() )
         {
             _clampable->setDepthOffsetOptions(*render->depthOffset());
@@ -1215,7 +1226,6 @@ FeatureModelGraph::checkForGlobalStyles( const Style& style )
 
     else 
     {
-        const RenderSymbol* render = style.get<RenderSymbol>();
         if ( render && render->depthOffset().isSet() )
         {
             _depthOffsetAdapter.setGraph( this );

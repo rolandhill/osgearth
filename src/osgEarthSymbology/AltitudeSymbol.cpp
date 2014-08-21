@@ -39,7 +39,8 @@ _verticalOffset    ( NumericExpression(0.0) )
 Config 
 AltitudeSymbol::getConfig() const
 {
-    Config conf;
+    Config conf = Symbol::getConfig();
+
     conf.key() = "altitude";
     conf.addIfSet   ( "clamping",  "none",       _clamping, CLAMP_NONE );
     conf.addIfSet   ( "clamping",  "terrain",    _clamping, CLAMP_TO_TERRAIN );
@@ -128,5 +129,8 @@ AltitudeSymbol::parseSLD(const Config& c, Style& style)
     }
     else if ( match(c.key(), "altitude-scale") ) {
         style.getOrCreate<AltitudeSymbol>()->verticalScale() = NumericExpression( c.value() );
+    }
+    else if ( match(c.key(), "altitude-script") ) {
+        style.getOrCreate<AltitudeSymbol>()->script() = StringExpression(c.value());
     }
 }

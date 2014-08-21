@@ -233,10 +233,11 @@ public:
             if ( _options.shaderPolicy() == SHADERPOLICY_GENERATE )
             {
                 osg::ref_ptr<StateSetCache> cache = new StateSetCache();
-                ShaderGenerator gen;
-                gen.setProgramName( _options.url()->base() );
-                gen.run( result, cache.get() );
-                cache->dumpStats();
+
+                Registry::shaderGenerator().run(
+                    result,
+                    _options.url()->base(),
+                    cache.get() );
             }
             else if ( _options.shaderPolicy() == SHADERPOLICY_DISABLE )
             {

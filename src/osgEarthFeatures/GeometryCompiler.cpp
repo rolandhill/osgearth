@@ -43,6 +43,8 @@ using namespace osgEarth;
 using namespace osgEarth::Features;
 using namespace osgEarth::Symbology;
 
+//#define PROFILING 1
+
 //-----------------------------------------------------------------------
 
 namespace
@@ -323,7 +325,8 @@ GeometryCompiler::compile(FeatureList&          workingSet,
         altitude && (
             altitude->clamping() != AltitudeSymbol::CLAMP_NONE ||
             altitude->verticalOffset().isSet() ||
-            altitude->verticalScale().isSet() );
+            altitude->verticalScale().isSet() ||
+            altitude->script().isSet() );
 
     // marker substitution -- to be deprecated in favor of model/icon
     if ( marker )
@@ -510,9 +513,9 @@ GeometryCompiler::compile(FeatureList&          workingSet,
         if ( _options.shaderPolicy() == SHADERPOLICY_GENERATE )
         {
             // no ss cache because we will optimize later.
-            ShaderGenerator gen;
-            gen.setProgramName( "osgEarth.GeometryCompiler" );
-            gen.run( resultGroup.get() );
+            Registry::shaderGenerator().run( 
+                resultGroup.get(),
+                "osgEarth.GeomCompiler" );
         }
         else if ( _options.shaderPolicy() == SHADERPOLICY_DISABLE )
         {
@@ -528,20 +531,28 @@ GeometryCompiler::compile(FeatureList&          workingSet,
         // Common state set cache?
         osg::ref_ptr<StateSetCache> sscache;
         if ( sharedCX.getSession() )
+        {
+            // with a shared cache, don't combine statesets. They may be
+            // in the live graph
             sscache = sharedCX.getSession()->getStateSetCache();
+            sscache->consolidateStateAttributes( resultGroup.get() );
+        }
         else 
+        {
+            // isolated: perform full optimization
             sscache = new StateSetCache();
-
-        sscache->optimize( resultGroup.get() );
+            sscache->optimize( resultGroup.get() );
+        }
     }
 
+    //test: dump the tile to disk
     //osgDB::writeNodeFile( *(resultGroup.get()), "out.osg" );
 
 #ifdef PROFILING
     osg::Timer_t p_end = osg::Timer::instance()->tick();
     OE_INFO << LC
-        << "features = " << p_features <<
-        << " ,time = " << osg::Timer::instance()->delta_s(p_start, p_end) << " s." << std::endl;
+        << "features = " << p_features
+        << ", time = " << osg::Timer::instance()->delta_s(p_start, p_end) << " s." << std::endl;
 #endif
 
     return resultGroup.release();

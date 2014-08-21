@@ -25,10 +25,10 @@
 #include <osgEarth/Registry>
 #include <osgEarth/HeightFieldUtils>
 #include <osgEarth/Progress>
+#include <osgEarth/Containers>
 
 using namespace osgEarth::Drivers::MPTerrainEngine;
 using namespace osgEarth;
-using namespace OpenThreads;
 
 #define LC "[SingleKeyNodeFactory] "
 
@@ -62,11 +62,38 @@ SingleKeyNodeFactory::getMinimumRequiredLevel()
         minLevel;
 }
 
+//Experimental: this speeds up tile loading a lot; it's sort of an alternative
+// to the OSG_MAX_PAGEDLOD cache.
+//#define EXPERIMENTAL_TILE_NODE_CACHE
+#ifdef EXPERIMENTAL_TILE_NODE_CACHE
+namespace
+{
+    typedef LRUCache<TileKey, osg::ref_ptr<TileNode> > TileNodeCache;
+    TileNodeCache cache(true, 16384);
+}
+#endif
+
 osg::Node*
 SingleKeyNodeFactory::createTile(TileModel* model, bool setupChildrenIfNecessary)
 {
+#ifdef EXPERIMENTAL_TILE_NODE_CACHE
+    osg::ref_ptr<TileNode> tileNode;
+    TileNodeCache::Record rec;
+    cache.get(model->_tileKey, rec);
+    if ( rec.valid() )
+    {
+        tileNode = rec.value().get();
+    }
+    else
+    {
+        tileNode = _modelCompiler->compile( model, _frame );
+        cache.insert(model->_tileKey, tileNode);
+    }
+#else
     // compile the model into a node:
     TileNode* tileNode = _modelCompiler->compile( model, _frame );
+#endif
+
     tileNode->setTerrainEngineNode( _terrainEngineNode.get() );
 
     // see if this tile might have children.
@@ -118,7 +145,7 @@ SingleKeyNodeFactory::createTile(TileModel* model, bool setupChildrenIfNecessary
         osgDB::Options* options = plod->getOrCreateDBOptions();
         options->setFileLocationCallback( new FileLocationCallback() );
 #endif
-        
+
         result = plod;
 
         // this one rejects back-facing tiles:
@@ -143,7 +170,7 @@ SingleKeyNodeFactory::createTile(TileModel* model, bool setupChildrenIfNecessary
 
 
 osg::Node*
-SingleKeyNodeFactory::createNode(const TileKey&    key, 
+SingleKeyNodeFactory::createNode(const TileKey&    key,
                                  bool              setupChildren,
                                  ProgressCallback* progress )
 {
@@ -151,7 +178,7 @@ SingleKeyNodeFactory::createNode(const TileKey&    key,
         return 0L;
 
     _frame.sync();
-    
+
     OE_START_TIMER(create_model);
 
     osg::ref_ptr<TileModel> model[4];
@@ -159,7 +186,7 @@ SingleKeyNodeFactory::createNode(const TileKey&    key,
     {
         if ( progress && progress->isCanceled() )
             return 0L;
-        
+
         TileKey child = key.createChildKey(q);
         _modelFactory->createTileModel( child, _frame, model[q], progress, _options.noDataHeight().value() );
 
@@ -203,7 +230,7 @@ SingleKeyNodeFactory::createNode(const TileKey&    key,
             }
         }
     }
-    
+
     if ( progress && progress->isCanceled() )
         return 0L;
 

@@ -39,6 +39,7 @@ using namespace osgEarth::ShaderComp;
 //#define OE_TEST OE_NOTICE
 //#define USE_ATTRIB_ALIASES
 //#define DEBUG_APPLY_COUNTS
+//#define DEBUG_ACCUMULATION
 
 //------------------------------------------------------------------------
 
@@ -98,6 +99,27 @@ namespace
 
     // global/static repo.
     static ProgramSharedRepo s_programRepo;
+
+
+    /** Locate a function by name in the location map. */
+    bool findFunction(const std::string&               name, 
+                      ShaderComp::FunctionLocationMap& flm, 
+                      ShaderComp::Function**           output)
+    {        
+        for(ShaderComp::FunctionLocationMap::iterator i = flm.begin(); i != flm.end(); ++i )
+        {
+            ShaderComp::OrderedFunctionMap& ofm = i->second;
+            for( ShaderComp::OrderedFunctionMap::iterator j = ofm.begin(); j != ofm.end(); ++j )
+            {
+                if ( j->second._name.compare(name) == 0 )
+                {
+                    (*output) = &j->second;
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 }
 
 //------------------------------------------------------------------------
@@ -413,6 +435,41 @@ namespace
                                VirtualProgram::ShaderVector&       outputKeyVector)
     {
 
+#ifdef DEBUG_ACCUMULATION
+
+        // test dump .. function map and shader map should always include identical data.
+        OE_INFO << LC << "====PROGRAM: " << programName << "\n";
+
+        // debug:
+        OE_INFO << LC << "====FUNCTIONS:\n";
+
+        for(ShaderComp::FunctionLocationMap::iterator i = accumFunctions.begin();
+            i != accumFunctions.end();
+            ++i)
+        {
+            ShaderComp::OrderedFunctionMap& ofm = i->second;
+            for(ShaderComp::OrderedFunctionMap::iterator j = ofm.begin(); j != ofm.end(); ++j)
+            {
+                OE_INFO << LC 
+                    << j->second._name << ", " << (j->second.accept(state)?"accepted":"rejected")
+                    << std::endl;
+            }
+        }
+
+        OE_INFO << LC << "====SHADERS:\n";
+        for(VirtualProgram::ShaderMap::iterator i = accumShaderMap.begin();
+            i != accumShaderMap.end();
+            ++i)
+        {
+            OE_INFO << LC
+                << i->first << ", "
+                << (i->second.accept(state)?"accepted":"rejected") << ", "
+                << i->second._overrideValue
+                << std::endl;
+        }
+        OE_INFO << LC << "\n\n";
+#endif
+
         // create new MAINs for this function stack.
         osg::Shader* vertMain = Registry::shaderFactory()->createVertexShaderMain( accumFunctions );
         osg::Shader* fragMain = Registry::shaderFactory()->createFragmentShaderMain( accumFunctions );
@@ -445,6 +502,29 @@ namespace
 
         return program;
     }
+}
+
+//------------------------------------------------------------------------
+
+VirtualProgram::ShaderEntry::ShaderEntry() :
+_overrideValue(0)
+{
+    //nop
+}
+
+bool
+VirtualProgram::ShaderEntry::accept(const osg::State& state) const
+{
+    return (!_accept.valid()) || (_accept->operator()(state) == true);
+}
+
+bool
+VirtualProgram::ShaderEntry::operator < (const VirtualProgram::ShaderEntry& rhs) const
+{
+    if ( _shader->compare(*rhs._shader.get()) < 0 ) return true;
+    if ( _overrideValue < rhs._overrideValue ) return true;
+    if ( _accept.valid() && !rhs._accept.valid() ) return true;
+    return false;
 }
 
 //------------------------------------------------------------------------
@@ -586,13 +666,8 @@ VirtualProgram::compare(const osg::StateAttribute& sa) const
             const ShaderEntry& lhsEntry = lhsIter->second;
             const ShaderEntry& rhsEntry = rhsIter->second;
 
-            int shaderComp = lhsEntry._shader->compare( *rhsEntry._shader.get() );
-            if ( shaderComp != 0 ) return shaderComp;
-
-            if ( lhsEntry._overrideValue < rhsEntry._overrideValue ) return -1;
-            if ( lhsEntry._overrideValue > rhsEntry._overrideValue ) return 1;
-
-            //todo: compare accept member??
+            if ( lhsEntry < rhsEntry ) return -1;
+            if ( rhsEntry < lhsEntry ) return  1;
 
             lhsIter++;
             rhsIter++;
@@ -818,6 +893,32 @@ VirtualProgram::setFunction(const std::string&           functionName,
     } // release lock
 }
 
+void 
+VirtualProgram::setFunctionMinRange(const std::string& name, float minRange)
+{
+    // lock the functions map while making changes:
+    Threading::ScopedWriteLock exclusive( _dataModelMutex );
+
+    ShaderComp::Function* function;
+    if ( findFunction(name, _functions, &function) )
+    {
+        function->_minRange = minRange;
+    }
+}
+
+void 
+VirtualProgram::setFunctionMaxRange(const std::string& name, float maxRange)
+{
+    // lock the functions map while making changes:
+    Threading::ScopedWriteLock exclusive( _dataModelMutex );
+
+    ShaderComp::Function* function;
+    if ( findFunction(name, _functions, &function) )
+    {
+        function->_maxRange = maxRange;
+    }
+}
+
 void
 VirtualProgram::removeShader( const std::string& shaderID )
 {
@@ -929,7 +1030,10 @@ VirtualProgram::apply( osg::State& state ) const
     for( ShaderMap::iterator i = accumShaderMap.begin(); i != accumShaderMap.end(); ++i )
     {
         ShaderEntry& entry = i->second;
-        vec.push_back( entry._shader.get() );
+        if ( i->second.accept(state) )
+        {
+            vec.push_back( entry._shader.get() );
+        }
     }
 
     // see if there's already a program associated with this list:
@@ -1123,8 +1227,8 @@ VirtualProgram::accumulateFunctions(const osg::State&                state,
                                         break;
                                     }
                                 }
+                                dest.insert( *k );
                             }
-                            dest.insert( *k );
                         }
                     }
                 }
