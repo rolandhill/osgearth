@@ -46,7 +46,7 @@ _minFilter( osg::Texture::LINEAR_MIPMAP_LINEAR ),
 _magFilter( osg::Texture::LINEAR),
 _primaryTraversalMask  ( 0xFFFFFFFF ),
 _secondaryTraversalMask( 0x80000000 ),
-_noDataHeight( NO_DATA_VALUE )
+_noDataHeight( 0.0f )
 {
     fromConfig( _conf );
 }
@@ -56,7 +56,7 @@ TerrainOptions::getConfig() const
 {
     Config conf = DriverConfigOptions::getConfig();
     conf.key() = "terrain";
-    
+
     if ( _heightFieldSampleRatio.isSetTo( 0.0f ) )
         conf.update( "sample_ratio", "auto" );
     else
@@ -64,7 +64,7 @@ TerrainOptions::getConfig() const
 
     conf.updateIfSet( "vertical_scale", _verticalScale );
     conf.updateIfSet( "vertical_offset", _verticalOffset );
-    conf.updateIfSet( "min_tile_range_factor", _minTileRangeFactor );    
+    conf.updateIfSet( "min_tile_range_factor", _minTileRangeFactor );
     conf.updateIfSet( "max_lod", _maxLOD );
     conf.updateIfSet( "min_lod", _minLOD );
     conf.updateIfSet( "first_lod", _firstLOD );
@@ -107,7 +107,7 @@ TerrainOptions::fromConfig( const Config& conf )
 
     conf.getIfSet( "vertical_scale", _verticalScale );
     conf.getIfSet( "vertical_offset", _verticalOffset );
-    conf.getIfSet( "min_tile_range_factor", _minTileRangeFactor );    
+    conf.getIfSet( "min_tile_range_factor", _minTileRangeFactor );
     conf.getIfSet( "max_lod", _maxLOD ); conf.getIfSet( "max_level", _maxLOD );
     conf.getIfSet( "min_lod", _minLOD ); conf.getIfSet( "min_level", _minLOD );
     conf.getIfSet( "first_lod", _firstLOD ); conf.getIfSet( "first_level", _firstLOD );
