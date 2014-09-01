@@ -53,7 +53,8 @@ Map::Map( const MapOptions& options ) :
 osg::Referenced      ( true ),
 _mapOptions          ( options ),
 _initMapOptions      ( options ),
-_dataModelRevision   ( 0 )
+_dataModelRevision   ( 0 ),
+_noDataHeight        ( 0.0f )
 {
     // Generate a UID.
     _uid = Registry::instance()->createUID();
@@ -64,7 +65,7 @@ _dataModelRevision   ( 0 )
         !Registry::instance()->defaultCachePolicy().isSet())
     {
         Registry::instance()->setDefaultCachePolicy( _mapOptions.cachePolicy().get() );
-        OE_INFO << LC 
+        OE_INFO << LC
             << "Setting default cache policy from map ("
             << _mapOptions.cachePolicy()->usageString() << ")" << std::endl;
     }
@@ -109,7 +110,7 @@ Map::notifyElevationLayerVisibleChanged(TerrainLayer* layer)
         newRevision = ++_dataModelRevision;
     }
 
-    // a separate block b/c we don't need the mutex   
+    // a separate block b/c we don't need the mutex
     for( MapCallbackList::iterator i = _mapCallbacks.begin(); i != _mapCallbacks.end(); i++ )
     {
         i->get()->onMapModelChanged( MapModelChange(
@@ -120,7 +121,7 @@ Map::notifyElevationLayerVisibleChanged(TerrainLayer* layer)
 bool
 Map::isGeocentric() const
 {
-    return 
+    return
         _mapOptions.coordSysType() == MapOptions::CSTYPE_GEOCENTRIC ||
         _mapOptions.coordSysType() == MapOptions::CSTYPE_GEOCENTRIC_CUBE;
 }
@@ -323,7 +324,7 @@ Map::getCache() const
     if ( !_cache.valid() )
     {
         Cache* cache = 0L;
-        
+
         // if there's a cache in the registry, install it now.
         if ( Registry::instance()->getCache() )
         {
@@ -369,14 +370,14 @@ Map::setCache( Cache* cache )
     }
 }
 
-void 
+void
 Map::addMapCallback( MapCallback* cb ) const
 {
     if ( cb )
         const_cast<Map*>(this)->_mapCallbacks.push_back( cb );
 }
 
-void 
+void
 Map::removeMapCallback( MapCallback* cb )
 {
     MapCallbackList::iterator i = std::find( _mapCallbacks.begin(), _mapCallbacks.end(), cb);
@@ -401,7 +402,7 @@ void
 Map::endUpdate()
 {
     MapModelChange msg( MapModelChange::END_BATCH_UPDATE, _dataModelRevision );
- 
+
     for( MapCallbackList::iterator i = _mapCallbacks.begin(); i != _mapCallbacks.end(); i++ )
     {
         i->get()->onMapModelChanged( msg );
@@ -438,7 +439,7 @@ Map::addImageLayer( ImageLayer* layer )
             newRevision = ++_dataModelRevision;
         }
 
-        // a separate block b/c we don't need the mutex   
+        // a separate block b/c we don't need the mutex
         for( MapCallbackList::iterator i = _mapCallbacks.begin(); i != _mapCallbacks.end(); i++ )
         {
             i->get()->onMapModelChanged( MapModelChange(
@@ -478,13 +479,13 @@ Map::insertImageLayer( ImageLayer* layer, unsigned int index )
             newRevision = ++_dataModelRevision;
         }
 
-        // a separate block b/c we don't need the mutex   
+        // a separate block b/c we don't need the mutex
         for( MapCallbackList::iterator i = _mapCallbacks.begin(); i != _mapCallbacks.end(); i++ )
         {
             i->get()->onMapModelChanged( MapModelChange(
                 MapModelChange::ADD_IMAGE_LAYER, newRevision, layer, index) );
-        }   
-    }   
+        }
+    }
 }
 
 void
@@ -499,7 +500,7 @@ Map::addElevationLayer( ElevationLayer* layer )
 
         //Set the Cache for the MapLayer to our cache.
         layer->setCache( this->getCache() );
-        
+
         // Tell the layer the map profile, if possible:
         if ( _profile.valid() )
             layer->setTargetProfileHint( _profile.get() );
@@ -518,7 +519,7 @@ Map::addElevationLayer( ElevationLayer* layer )
         // listen for changes in the layer.
         layer->addCallback( _elevationLayerCB.get() );
 
-        // a separate block b/c we don't need the mutex   
+        // a separate block b/c we don't need the mutex
         for( MapCallbackList::iterator i = _mapCallbacks.begin(); i != _mapCallbacks.end(); i++ )
         {
             i->get()->onMapModelChanged( MapModelChange(
@@ -527,7 +528,7 @@ Map::addElevationLayer( ElevationLayer* layer )
     }
 }
 
-void 
+void
 Map::removeImageLayer( ImageLayer* layer )
 {
     osgEarth::Registry::instance()->clearBlacklist();
@@ -563,7 +564,7 @@ Map::removeImageLayer( ImageLayer* layer )
     }
 }
 
-void 
+void
 Map::removeElevationLayer( ElevationLayer* layer )
 {
     osgEarth::Registry::instance()->clearBlacklist();
@@ -836,7 +837,7 @@ Map::addTerrainMaskLayer( MaskLayer* layer )
 
         layer->initialize( _dbOptions.get(), this );
 
-        // a separate block b/c we don't need the mutex   
+        // a separate block b/c we don't need the mutex
         for( MapCallbackList::iterator i = _mapCallbacks.begin(); i != _mapCallbacks.end(); i++ )
         {
             i->get()->onMapModelChanged( MapModelChange(
@@ -865,13 +866,13 @@ Map::removeTerrainMaskLayer( MaskLayer* layer )
                 }
             }
         }
-        
-        // a separate block b/c we don't need the mutex   
+
+        // a separate block b/c we don't need the mutex
         for( MapCallbackList::iterator i = _mapCallbacks.begin(); i != _mapCallbacks.end(); i++ )
         {
             i->get()->onMapModelChanged( MapModelChange(
                 MapModelChange::REMOVE_MASK_LAYER, newRevision, layerRef.get()) );
-        }   
+        }
     }
 }
 
@@ -895,8 +896,8 @@ Map::clear()
         // calculate a new revision.
         newRevision = ++_dataModelRevision;
     }
-    
-    // a separate block b/c we don't need the mutex   
+
+    // a separate block b/c we don't need the mutex
     for( MapCallbackList::iterator i = _mapCallbacks.begin(); i != _mapCallbacks.end(); i++ )
     {
         for( ImageLayerVector::iterator k = imageLayersRemoved.begin(); k != imageLayersRemoved.end(); ++k )
@@ -955,7 +956,7 @@ Map::calculateProfile()
                 }
                 else
                 {
-                    OE_WARN << LC 
+                    OE_WARN << LC
                         << "Map is geocentric, but the configured profile SRS ("
                         << userProfile->getSRS()->getName() << ") is not geographic; "
                         << "it will be ignored."
@@ -1010,7 +1011,7 @@ Map::calculateProfile()
 
         // convert the profile to Plate Carre if necessary.
         if (_profile.valid() &&
-            _profile->getSRS()->isGeographic() && 
+            _profile->getSRS()->isGeographic() &&
             getMapOptions().coordSysType() == MapOptions::CSTYPE_PROJECTED )
         {
             OE_INFO << LC << "Projected display with geographic SRS; activating Plate Carre mode" << std::endl;
@@ -1085,7 +1086,7 @@ Map::populateHeightField(osg::ref_ptr<osg::HeightField>& hf,
 {
     Threading::ScopedReadLock lock( const_cast<Map*>(this)->_mapDataMutex );
 
-    ElevationInterpolation interp = getMapOptions().elevationInterpolation().get();    
+    ElevationInterpolation interp = getMapOptions().elevationInterpolation().get();
 
     if ( !hf.valid() )
     {
@@ -1150,8 +1151,8 @@ Map::sync( MapFrame& frame ) const
         // sync the revision numbers.
         frame._initialized = true;
         frame._mapDataModelRevision = _dataModelRevision;
-            
+
         result = true;
-    }    
+    }
     return result;
 }
