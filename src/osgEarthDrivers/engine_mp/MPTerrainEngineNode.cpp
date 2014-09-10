@@ -443,6 +443,9 @@ MPTerrainEngineNode::traverse(osg::NodeVisitor& nv)
 {
     if ( nv.getVisitorType() == nv.CULL_VISITOR )
     {
+
+#if 0 // believe this is now unnecessary
+
         // since the root tiles are manually added, the pager never has a chance to
         // register the PagedLODs in their children. So we have to do it manually here.
         if ( !_rootTilesRegistered )
@@ -460,6 +463,7 @@ MPTerrainEngineNode::traverse(osg::NodeVisitor& nv)
                 }
             }
         }
+#endif
 
         // Inform the registry of the current frame so that Tiles have access
         // to the information.

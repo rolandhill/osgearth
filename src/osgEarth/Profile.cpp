@@ -612,44 +612,23 @@ Profile::addIntersectingTiles(const GeoExtent& key_ext, unsigned localLOD, std::
     int tileMinX, tileMaxX;
     int tileMinY, tileMaxY;
 
-    // Special path for mercator (does NOT work for cube, e.g.)
-//    if ( key_ext.getSRS()->isMercator() )
-//    {
-//        int precision = 5;
-//        double eps = 0.001;
-//
-//        double keyWidth = round(key_ext.width(), precision);
-//        int destLOD = 0;
-//        double w, h;
-//        getTileDimensions(0, w, h);
-//        for(; (round(w,precision) - keyWidth) > eps; w*=0.5, h*=0.5, destLOD++ );
-//
-//        double destTileWidth, destTileHeight;
-//        getTileDimensions( destLOD, destTileWidth, destTileHeight );
-//        destTileWidth = round(destTileWidth, precision);
-//        destTileHeight = round(destTileHeight, precision);
-//
-//        tileMinX = quantize( ((key_ext.xMin() - _extent.xMin()) / destTileWidth), eps );
-//        tileMaxX = (int)((key_ext.xMax() - _extent.xMin()) / destTileWidth);
-//
-//        tileMinY = quantize( ((_extent.yMax() - key_ext.yMax()) / destTileHeight), eps );
-//        tileMaxY = (int) ((_extent.yMax() - key_ext.yMin()) / destTileHeight);
-//    }
-//
-//    else
-    {
-        double destTileWidth, destTileHeight;
-        getTileDimensions(localLOD, destTileWidth, destTileHeight);
+    double destTileWidth, destTileHeight;
+    getTileDimensions(localLOD, destTileWidth, destTileHeight);
 
-        //OE_DEBUG << std::fixed << "  Source Tile: " << key.getLevelOfDetail() << " (" << keyWidth << ", " << keyHeight << ")" << std::endl;
-        //OE_DEBUG << std::fixed << "  Dest Size: " << destLOD << " (" << destTileWidth << ", " << destTileHeight << ")" << std::endl;
+    //OE_DEBUG << std::fixed << "  Source Tile: " << key.getLevelOfDetail() << " (" << keyWidth << ", " << keyHeight << ")" << std::endl;
+    //OE_DEBUG << std::fixed << "  Dest Size: " << destLOD << " (" << destTileWidth << ", " << destTileHeight << ")" << std::endl;
 
-        tileMinX = (int)((key_ext.xMin() - _extent.xMin()) / destTileWidth);
-        tileMaxX = (int)((key_ext.xMax() - _extent.xMin()) / destTileWidth);
+    double east = key_ext.xMax() - _extent.xMin();
+    bool xMaxOnTileBoundary = fmod(east, destTileWidth) == 0.0;
 
-        tileMinY = (int)((_extent.yMax() - key_ext.yMax()) / destTileHeight);
-        tileMaxY = (int)((_extent.yMax() - key_ext.yMin()) / destTileHeight);
-    }
+    double south = _extent.yMax() - key_ext.yMin();
+    bool yMaxOnTileBoundary = fmod(south, destTileHeight) == 0.0;
+
+    tileMinX = (int)((key_ext.xMin() - _extent.xMin()) / destTileWidth);
+    tileMaxX = (int)(east / destTileWidth) - (xMaxOnTileBoundary ? 1 : 0);
+
+    tileMinY = (int)((_extent.yMax() - key_ext.yMax()) / destTileHeight); 
+    tileMaxY = (int)(south / destTileHeight) - (yMaxOnTileBoundary ? 1 : 0);
 
     unsigned int numWide, numHigh;
     getNumTiles(localLOD, numWide, numHigh);
