@@ -1092,7 +1092,7 @@ public:
         else
         {
             unsigned int max_level = 30;
-            for (unsigned int i = 0; i < max_level; ++i)
+            for (unsigned int i = 1; i < max_level; ++i)
             {
                 _maxDataLevel = i;
                 double w, h;
